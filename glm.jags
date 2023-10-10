@@ -1,0 +1,28 @@
+
+model{
+    
+#priors
+   for (u in 1:3){                             
+      site.beta[u] ~ dnorm(0, 0.01)               #priors for birthsite
+ }
+
+  tau <- 1/(sigma*sigma)
+  sigma ~ dunif(0,100)
+  
+  age.beta ~dnorm(0,0.001) 
+   
+# Likelihood 
+for (i in 1:n){
+   antler[i] ~ dpois(lambda[i])
+   lambda[i] <- exp(site.beta[bs[i]] + (age.beta * ageclass[i])) 
+   }
+
+
+#derived parameter, creating a 3x12 matrix
+for(i in 1:3){ #site
+  for (j in 1:12){ #age
+    derived_antler[i,j] <- exp(site.beta[i] + (age.beta * j))
+  }
+}
+}   
+

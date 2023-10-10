@@ -1,0 +1,57 @@
+
+model{
+    
+#priors
+  
+  #age.beta[1] <- 0      #need to set baseline of zero for >1 categorical covariate
+  #site.beta[1] <- 0     #need to set baseline of zero for >1 categorical covariate
+  
+   for (u in 1:3){                             
+      site.beta[u] ~ dnorm(0, 0.01)               #priors for birthsite
+ }
+
+  #int~dnorm(0,0.001)        #need an intercept to build priors upon
+  tau <- 1/(sigma*sigma)
+  sigma ~ dunif(0,100)
+  
+  age.beta ~dnorm(0,0.001) # need agebeta and agebeta2 for quadratic effect
+  age.beta2~dnorm(0,0.001)
+
+  
+  for(capyear in 1:14){                    #random effect for capyear 
+    eps.capyear[capyear] ~ dnorm(0, tau.capyear)
+  }
+  tau.capyear <- 1/(sigma.capyear * sigma.capyear)
+  sigma.capyear ~ dunif(0, 100) #random effect SD youre saying that each year-specific error term is coming
+                                # from the same distributionm i.e. same mean (0) and standard
+                                # deviation (sigma.period). The standard deviation is what connects all the
+                                # year-specific random effects to the same distribution.
+                                
+  for(birthyear in 1:14){                    #random effect for birthyear
+      eps.birthyear[birthyear] ~ dnorm(0, tau.birthyear)
+    }
+    tau.birthyear <- 1/(sigma.birthyear * sigma.birthyear)
+    sigma.birthyear ~ dunif(0, 100)
+
+ for(animal_id in 1:475){                       #random effect for animal_id
+    eps.id[animal_id] ~ dnorm(0, tau.id)
+  }
+
+  tau.id <- 1/(sigma.id * sigma.id)
+  sigma.id ~ dunif(0, 100)
+   
+# Likelihood 
+for (i in 1:n){
+   antler[i] ~ dnorm(mu[i], tau)
+   mu[i] <- site.beta[bs[i]] + (age.beta * ageclass[i]) + (age.beta2 * ageclass[i]*ageclass[i]) + eps.capyear[capyear[i]] + eps.birthyear[birthyear[i]] + eps.id[animal_id[i]]
+}
+
+
+#derived parameter, creating a 3x12 matrix
+for(i in 1:3){ #site
+  for (j in 1:12){ #age
+    derived_antler[i,j] <- site.beta[i] + age.beta*j + age.beta2*j*j #im still confused why we multiple by j and not [j]
+  }
+}
+}   
+

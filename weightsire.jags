@@ -1,0 +1,62 @@
+
+model{
+  
+#priors
+  
+  ageclass.beta[1] <- 0      #need to set baseline of zero for >1 categorical covariate
+  # group.beta[1] <- 0     #need to set baseline of zero for >1 categorical covariate
+  
+  int~dunif(30,50)        #need an intercept to build priors upon
+
+  for (u in 1:2){
+    group.beta[u] ~ dunif(0,100) #needed dnorm for bs because of negative values!
+  }
+  
+  for(u in 2:12){
+    ageclass.beta[u] ~ dunif(0,150)
+  }
+
+  tau <- 1/(sigma*sigma)
+  sigma ~ dunif(0,100)
+
+
+  for(capyear in 1:14){                    #random effect for capyear
+    eps.capyear[capyear] ~ dnorm(0, tau.capyear)
+  }
+  tau.capyear <- 1/(sigma.capyear * sigma.capyear)
+  sigma.capyear ~ dunif(0, 100) #random effect SD youre saying that each year-specific error term is coming
+                                # from the same distributionm i.e. same mean (0) and standard
+                                # deviation (sigma.period). The standard deviation is what connects all the
+                                # year-specific random effects to the same distribution.
+
+  # for(birthyear in 1:14){                    #random effect for birthyear
+  #     eps.birthyear[birthyear] ~ dnorm(0, tau.birthyear)
+  #   }
+  # tau.birthyear <- 1/(sigma.birthyear * sigma.birthyear)
+  # sigma.birthyear ~ dunif(0, 150)
+
+# 
+#   for(animal_id in 1:475){                       #random effect for animal_id
+#     eps.id[animal_id] ~ dnorm(0, tau.id)
+#   }
+# 
+#   tau.id <- 1/(sigma.id * sigma.id)
+#   sigma.id ~ dunif(0, 100)
+
+# Likelihood 
+for (i in 1:n){
+   weight[i] ~ dnorm(mu[i], tau) #each weight is a draw from this distribution
+   mu[i] <- int + (ageclass.beta[ageclass[i]])  + group.beta[group[i]] + eps.capyear[capyear[i]] #+ eps.birthyear[birthyear[i]] + eps.id[animal_id[i]]
+  }
+# 
+#derived parameter
+# for (i in 1:2){ #group
+#   for (j in 1:12){ #age
+#     derived_weight[i,j]<- int+ group.beta[i] + ageclass.beta[j]
+# }
+# }
+# 
+group.diff <- group.beta[1] - group.beta[2]
+  
+}
+

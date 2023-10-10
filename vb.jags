@@ -1,0 +1,28 @@
+
+model{
+    
+#priors, original analysis by Doll and Jacquemin 2018 used informative priors that were specified by taking the mean and SD of each param
+ 
+  tau <- 1/(sigma*sigma)
+  sigma ~ dunif(0,100)
+  logLinf ~ dnorm(0,1/1000)#T(-10,10)
+  logK ~ dnorm(0,1/1000)#T(-5,5)
+  t0 ~ dnorm(0,1/1000)                  #theoretical age when antlers are zero cm
+
+  
+#Exponentiate parameters
+  Linf = exp(logLinf) #theoretical maximum mean antler size achieved, log scale to restrict to positive values
+  K = exp(logK)       #brody growth coefficient , log scale to restrict to positive values 
+
+#Likelihood 
+  for (i in 1:n){
+     antler[i] ~ dnorm(mu[i], tau)
+     mu[i] <- Linf*(1-exp(-K*(ageclass[i]-t0))) 
+  }
+  
+#derived parameter, creating a 3x12 matrix
+  for (j in 1:12){ #age
+    derived_antlers[j] <-  Linf*(1-exp(-K*(j-t0))) 
+  }
+}
+

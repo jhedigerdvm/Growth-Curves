@@ -1,0 +1,26 @@
+
+model{
+    
+#priors
+  
+  # age.beta[1] <- 0      #need to set baseline of zero for >1 categorical covariate
+  #int~dnorm(0,0.001)        #need an intercept to build priors upon
+  tau <- 1/(sigma*sigma)
+  sigma ~ dunif(0,100)
+  
+  age.beta ~dnorm(0,0.001) # need agebeta and agebeta2 for quadratic effect
+  age.beta2~dnorm(0,0.001)
+
+# Likelihood 
+for (i in 1:n){
+   antler[i] ~ dnorm(mu[i], tau)
+   mu[i] <- (age.beta * ageclass[i]) + (age.beta2 * ageclass[i]*ageclass[i]) 
+}
+
+
+#derived parameter, creating a 3x12 matrix
+  for (j in 1:12){ #age
+    derived_antler[j] <- age.beta*j + age.beta2*j*j 
+  }
+}
+

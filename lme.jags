@@ -1,0 +1,49 @@
+
+model{
+  
+#priors
+int ~ dunif(0,100)
+ageclass.beta[1] <- 0
+
+for(u in 2:12){
+  ageclass.beta[u] ~ dunif(0,100)
+}
+tau <- 1/(sigma*sigma)
+sigma ~ dunif(0,100)
+
+for(capyear in 1:14){                    #random effect for capyear
+    eps.capyear[capyear] ~ dnorm(0, tau.capyear)
+  }
+  tau.capyear <- 1/(sigma.capyear * sigma.capyear)
+  sigma.capyear ~ dunif(0, 100) 
+
+for(birthyear in 1:14){
+  eps.birthyear[birthyear] ~ dnorm(0, tau.birthyear)
+}
+  tau.birthyear <- 1/(sigma.birthyear*sigma.birthyear)
+  sigma.birthyear ~ dunif(0,100)
+
+for(id in 1:475){
+  eps.id[id] ~ dnorm(0, tau.id)
+}
+  tau.id <- 1/(sigma.id*sigma.id)
+  sigma.id ~ dunif(0,100)
+
+# Likelihood 
+for (i in 1:n){
+ weight[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
+ mu[i] <- int + ageclass.beta[ageclass[i]] + eps.capyear[capyear[i]] + eps.birthyear[birthyear[i]] +
+                    eps.id[id[i]]
+}
+ 
+#derived parameter
+for (j in 1:12){
+  weightlb[j] <- int + ageclass.beta[j]
+}
+
+for (j in 1:12){ #age
+  weight_difference[j] <- ageclass.beta[7]-ageclass.beta[j]
+}
+
+}   
+
