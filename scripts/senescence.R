@@ -1,3 +1,4 @@
+#usethis::use_git() #connect rproject to git
 #senescent life long curves
 
 library(jagsUI)
