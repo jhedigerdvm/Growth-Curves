@@ -260,7 +260,7 @@ nb <- 5000
 nt<- 10
 nc <- 3
 
-lme.ant.jags<- jagsUI(jags.data, inits, parameters, 'lme.ant.jags', n.thin = nt, n.chains = nc,
+lme.ant.jags<- jagsUI(jags.data, inits, parameters, './jags_files/lme.ant.jags', n.thin = nt, n.chains = nc,
                   n.burnin = nb, n.iter = ni)
 print(lme.ant.jags)
 MCMCtrace(lme.ant.jags)
@@ -306,7 +306,7 @@ plot_base_lme <-
 
 lme.plot<- plot_base_lme +
   # stat_halfeye()+
-  stat_pointinterval(alpha = 0.7, .width = c(0.5, 0.95)) +
+  stat_pointinterval(aes(point_size=3, linewidth = 4),alpha = 0.7, .width = c(0.5, 0.95)) +
   scale_x_discrete(limits=c('1', '2', '3', '4' ,'5' ,'6' ,'7','8','9','10','11','12'),
                    labels = c('1.5', '2.5', '3.5', '4.5' ,'5.5' ,'6.5' ,'7.5','8.5',
                               '9.5','10.5','11.5','12.5'))+
