@@ -1,0 +1,40 @@
+
+model{
+  
+#priors
+for(u in 1:12){ #ageclass
+  ageclass.beta[u] ~ dunif(0,10)
+}
+
+for (u in 1:3){ #birthsite
+  bs.beta[u] ~ dnorm(0,0.001)
+}
+
+for (u in 1:3) { #site and age interaction
+  age.bs.beta[u] ~ dnorm(0, 0.001)
+}
+
+tau <- 1/(sigma*sigma)
+sigma ~ dunif(0,100)
+
+
+# Likelihood 
+for (i in 1:n){
+ antler[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
+ mu[i] <- ageclass.beta[ageclass[i]] + bs.beta[bs[i]] + age.bs.beta[bs[i]] * ageclass[i]
+}
+
+#derived parameter
+  for (i in 1:3){ #birthsite
+    for (j in 1:12) { #ageclass
+      antlers[i,j] <- ageclass.beta[j] + bs.beta[i] + age.bs.beta[i]*j
+    }
+  }
+
+# 
+# for (j in 1:12){ #age
+#   antler_difference[j] <- ageclass.beta[6]-ageclass.beta[j]
+# }
+
+}   
+

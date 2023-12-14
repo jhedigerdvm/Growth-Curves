@@ -271,13 +271,13 @@ write.csv(summary_ants, 'antlersum.csv', row.names = T)
 
 #get output into a tibble before you can manipulate in ggplot
 posterior.lme<- tidy_draws(lme.ant.jags)
-posterior.lme <- posterior.lme[,c(16:27)]
+posterior.lme <- posterior.lme[,c(16:26)]
 
 #pivot longer puts them in a tibble format
 lme.long <- posterior.lme %>% pivot_longer(everything())
 
 #create age class column and assign 1-12 to appropriate ageclass
-lme.long$ageclass <- as.numeric(rep(c('1','2','3','4','5','6','7','8','9','10','11','12'), nrow(lme.long)/12))
+lme.long$ageclass <- as.numeric(rep(c('1','2','3','4','5','6','7','8','9','10','11'), nrow(lme.long)/11))
 
 #remove 'names' column
 lme.long <- lme.long[,-c(1)]
@@ -307,9 +307,9 @@ plot_base_lme <-
 lme.plot<- plot_base_lme +
   # stat_halfeye()+
   stat_pointinterval(alpha = .9, .width = c(0.5, 0.95)) +
-  scale_x_discrete(limits=c('1', '2', '3', '4' ,'5' ,'6' ,'7','8','9','10','11','12'),
+  scale_x_discrete(limits=c('1', '2', '3', '4' ,'5' ,'6' ,'7','8','9','10','11'),
                    labels = c('1.5', '2.5', '3.5', '4.5' ,'5.5' ,'6.5' ,'7.5','8.5',
-                              '9.5','10.5','11.5','12.5'))+
+                              '9.5','10.5','11.5'))+
   labs(x = "AGE CLASS", y = "ANTLER SCORE (IN)",
        title = "ANTLER SCORE BY AGE CLASS")
 
