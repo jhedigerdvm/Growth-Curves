@@ -244,3 +244,11 @@ lme.plot<- plot_base_lme +
        title = "ANTLER SIZE BY AGE CLASS") 
 
 ggsave('antler_in.png', lme.plot, bg='transparent', width = 10, height = 10)
+
+# 
+# #remove rows with NA values in antler column
+# data1<- data1[!is.na(data1[["bcsin"]]),]
+
+#what is the mean antler size by age and how many individuals in each group
+summary<-data1 %>% group_by(age,birthsite) %>% summarise(mean = mean(bcsin),
+                                                         n = n())

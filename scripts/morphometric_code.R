@@ -1,5 +1,3 @@
-
-
 library(jagsUI)
 library(ggplot2)
 library(tidyverse)
@@ -8,20 +6,20 @@ library(tidybayes)
 library(here)
 
 
-#Load dataset
+#Load dataset with no fawns, just animals with antlers
 data <- read.csv('./raw/bucks_nofawns.csv', header=T)
 head(data)
-
-data1<- read.csv('./raw/bucks_nofawns_sires.csv')
-data1[data1 == ""] <- NA                     # Replace blank by NA
-data1$sire<- data1$sire %>% replace_na('no')
-
-#dataframe containing all ey deer
-ey<- data1 %>%  filter(data1$birthsite=='ey')
-#sire only data
-sire <- data1 %>% filter(data1$sire=='yes')
-
-ey.sire.data<- rbind(ey,sire)
+# 
+# data1<- read.csv('./raw/bucks_nofawns_sires.csv')
+# data1[data1 == ""] <- NA                     # Replace blank by NA
+# data1$sire<- data1$sire %>% replace_na('no')
+# 
+# #dataframe containing all ey deer
+# ey<- data1 %>%  filter(data1$birthsite=='ey')
+# #sire only data
+# sire <- data1 %>% filter(data1$sire=='yes')
+# 
+# ey.sire.data<- rbind(ey,sire)
 
 
 #replace zeros with NA
@@ -37,7 +35,7 @@ bs  #dmp is 1, e yana 2, w yana 3
 class(data$year_cap)
 data$age <- data$year_cap - data$year_birth 
 ageclass <- data$age
-ageclass
+unique(ageclass)
 
 #create a vector for capture year, to fit random effect later
 capyear <- data$year_cap-min(data$year_cap)+1
@@ -62,16 +60,16 @@ antlerin <- data$bcsin
 #number of observations 
 n <- nrow(data)
 
+# 
+# #quick summary stats of data
+# dmp<-data %>% filter(data$birthsite=='dmp') 
+# ey <- data %>% filter(data$birthsite=='ey') 
+# wy <- data %>% filter(data$birthsite=='wy') 
 
-#quick summary stats of data
-dmp<-data %>% filter(data$birthsite=='dmp') 
-ey <- data %>% filter(data$birthsite=='ey') 
-wy <- data %>% filter(data$birthsite=='wy') 
-
-#assign group two sires
-sire.data<- sire.data
-sire.data$group <- recode(sire.data$group, 'dmp' = 'sire')
-sire.data$animal_id
+# #assign group two sires
+# sire.data<- sire.data
+# sire.data$group <- recode(sire.data$group, 'dmp' = 'sire')
+# sire.data$animal_id
 
 #Write linear mixed effects model for antlers in, this model continues increasing linearly into the older age classes
 set.seed(100)
@@ -95,7 +93,7 @@ for (i in 1:n){
  
 #derived parameter
 for (j in 1:12){ #age
-  antler_difference[j] <- ageclass.beta[7]-ageclass.beta[j]
+  antler_difference[j] <- ageclass.beta[6]-ageclass.beta[j]
 }
 
 }   
@@ -283,7 +281,6 @@ lme.plot<- plot_base_lme +
        title = "ANTLER SIZE BY AGE CLASS") 
 
 ggsave('weight_lb.png', lme.plot, bg='transparent', width = 10, height = 10)
-
 
 
 
