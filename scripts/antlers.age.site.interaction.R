@@ -10,18 +10,6 @@ library(here)
 #Load dataset with no fawns, just animals with antlers
 data <- read.csv('./raw/bucks_nofawns.csv', header=T)
 head(data)
-# 
-# data1<- read.csv('./raw/bucks_nofawns_sires.csv')
-# data1[data1 == ""] <- NA                     # Replace blank by NA
-# data1$sire<- data1$sire %>% replace_na('no')
-# 
-# #dataframe containing all ey deer
-# ey<- data1 %>%  filter(data1$birthsite=='ey')
-# #sire only data
-# sire <- data1 %>% filter(data1$sire=='yes')
-# 
-# ey.sire.data<- rbind(ey,sire)
-
 
 #replace zeros with NA
 data[data==0] <- NA
@@ -130,6 +118,7 @@ lme.jags<- jagsUI(jags.data, inits, parameters, 'ant.bs.age.jags', n.thin = nt, 
                   n.burnin = nb, n.iter = ni)
 print(lme.jags)
 MCMCtrace(lme.jags)
+write.csv(lme.jags$summary, 'antlers.bs.age.intrxn.csv')
 
 
 #create a tibble of the posterior draws
@@ -139,21 +128,6 @@ gather$age <- as.factor(gather$age)
 
 #find first row for 2nd rain value
 first_idx <- which(gather1$rain == 2)[1] # 4500 values of rain 1 
-
-#unscale and uncenter rain.sim
-# rain.sim1 <- (rain.sim * sd(data$annual)) + mean(data$annual)
-
-# #create vector containing simulated rainfall data but in the format to sync up with gather 
-# vector1 <- numeric(0)
-# rain.sim3 <- for (i in rain.sim1) {
-#   rep_i <- rep(i, times = 4500)
-#   vector1 <- c(vector1,rep_i)
-#   
-# }
-# 
-# gather1$rain1 <- vector1
-
-
 
 #plot 
 plot<- gather %>% 
@@ -176,7 +150,7 @@ plot<- gather %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/antler.smooth.jpg', plot, width = 15, height = 15)
+ggsave('./figures/antler.smooth.jpg', plot, width = 15, height = 10)
 
 plot2<- gather %>% 
   ggplot(aes(x=age, y=.value, color = site, fill = site)) +
@@ -199,7 +173,7 @@ plot2<- gather %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 plot2
-ggsave('./figures/antler.point.jpg', plot2, width = 15, height = 15)
+ggsave('./figures/antler.point.jpg', plot2, width = 15, height = 10)
 
 
 
@@ -208,7 +182,7 @@ set.seed(100)
 sink('ant.bs.age.jags')
 cat('
 model{
-  
+
 #priors
 
 for(u in 1:12){ #ageclass
@@ -227,7 +201,7 @@ tau <- 1/(sigma*sigma)
 sigma ~ dunif(0,100)
 
 
-# Likelihood 
+# Likelihood
 for (i in 1:n){
  antler[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
  mu[i] <- ageclass.beta[ageclass[i]] + bs.beta[bs[i]] #+ age.bs.beta[ageclass[i]] * bs[i]
@@ -247,7 +221,7 @@ for (i in 1:3){
     antlers_diff[i,j] <- antlers[1,j] - antlers[i,j]
   }
   }
-}   
+}
 ',fill = TRUE)
 sink()
 
@@ -255,11 +229,11 @@ sink()
 jags.data <- list(n=n, ageclass = ageclass, bs = bs, antler = antlerin)
 
 #inits function
-inits<- function(){list(ageclass.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1), 
+inits<- function(){list(ageclass.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1),
                         sigma = rlnorm(1))} #log normal pulls just positive values,age.bs.beta = rnorm(12, 0, 1),
 
 #parameters to estimate
-parameters <- c('ageclass.beta','bs.beta', 'antlers', 'antlers_diff')#'age.bs.beta', 
+parameters <- c('ageclass.beta','bs.beta', 'antlers', 'antlers_diff')#'age.bs.beta',
 
 #MCMC settings
 ni <- 2000
@@ -267,10 +241,11 @@ nb <- 1000
 nt<- 1
 nc <- 3
 
-antlers.bs.age<- jagsUI(jags.data, inits, parameters, 'ant.bs.age.jags', n.thin = nt, n.chains = nc, 
+antlers.bs.age<- jagsUI(jags.data, inits, parameters, 'ant.bs.age.jags', n.thin = nt, n.chains = nc,
                   n.burnin = nb, n.iter = ni)
 print(antlers.bs.age)
 MCMCtrace(antlers.bs.age)
+write.csv(antlers.bs.age$summary, 'antlers.bs.age.csv')
 
 
 #create a tibble of the posterior draws
@@ -300,7 +275,7 @@ plot3<- gather1 %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/antler.smooth.jpg', plot3, width = 15, height = 15)
+ggsave('./figures/antler.smooth2.jpg', plot3, width = 15, height = 10)
 
 plot4<- gather1 %>%
   ggplot(aes(x=age, y=.value, color = site, fill = site)) +
@@ -323,4 +298,4 @@ plot4<- gather1 %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 plot4
-ggsave('./figures/antler.point2.jpg', plot4, width = 15, height = 15)
+ggsave('./figures/antler.point2.jpg', plot4, width = 15, height = 10)
