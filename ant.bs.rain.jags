@@ -30,7 +30,7 @@ for (i in 1:n){
   for (i in 1:3){ #birthsite
     for (j in 1:1000){ #rain sim
         for (k in age){ #ageclasses
-      bcs[i,j,k] <- rain.beta*rain.sim[j] + bs.beta[i] + age.beta[k] + rain.bs.beta[i] * rain.sim[j]
+      bcs[j,i,k] <- rain.beta*rain.sim[j] + bs.beta[i] + age.beta[k] + rain.bs.beta[i] * rain.sim[j]
     }
     }
   }
