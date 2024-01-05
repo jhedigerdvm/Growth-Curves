@@ -8,7 +8,7 @@ library(here)
 #Load dataset with no fawns, just animals with antlers
 data <- read.csv('./raw/bucks_nofawns.csv', header=T)
 head(data)
-data$year <- data$year_cap
+
 #load rainfall data in inches, november to october periods
 rain <- read.csv("C:/Users/Joe/Documents/R Projects/Survival/cleaned/rainfall.csv", header = T)
 
@@ -39,4 +39,5 @@ data1$rain.cat <- ifelse(data1$annual <= 19.4, 1, ifelse(data1$annual >19.4 & da
 #concatenate birthsite and categorical rain into one column with 9 levels
 data1$rain.site<- as.factor(paste(data1$birthsite, data1$rain.cat, sep = "_"))
 
+write.csv(data1, './clean/morpho_rain.csv', row.names = F)
 

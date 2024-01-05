@@ -9,19 +9,10 @@ library(here)
 
 
 #Load dataset with no fawns, just animals with antlers
-data <- read.csv('./raw/bucks_nofawns.csv', header=T)
+data <- read.csv('./clean/morpho_rain.csv', header=T)
 head(data)
 data$year <- data$year_cap
-#load rainfall data in inches, november to october periods
-rain <- read.csv("C:/Users/Joe/Documents/R Projects/Survival/cleaned/rainfall.csv", header = T)
 
-merge <- merge(data, rain, by = c('year', 'birthsite'))
-data<- merge
-
-#replace zeros with NA
-data[data==0] <- NA
-
-write.csv(data, './clean/morpho_rain.csv', row.names = F)
 
 #create a vector with 1 for treatment, 2 for control, 3 for tgt
 bs<- as.numeric(factor(data$birthsite))
