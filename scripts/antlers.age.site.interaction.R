@@ -1,4 +1,4 @@
-#linear model looking at age birthsite interaction on antlers
+#linear model looking at the effect of age and site interaction on antlers
 library(jagsUI)
 library(ggplot2)
 library(tidyverse)
@@ -50,7 +50,7 @@ antlerin <- data$bcsin
 n <- nrow(data)
 
 
-#Write linear mixed effects model for antlers in, this model continues increasing linearly into the older age classes
+#Write linear mixed effects model for antlers in, 
 set.seed(100)
 sink('ant.bs.age.jags')
 cat('
