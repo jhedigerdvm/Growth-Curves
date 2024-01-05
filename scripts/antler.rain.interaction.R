@@ -21,6 +21,8 @@ data<- merge
 #replace zeros with NA
 data[data==0] <- NA
 
+write.csv(data, './clean/morpho_rain.csv', row.names = F)
+
 #create a vector with 1 for treatment, 2 for control, 3 for tgt
 bs<- as.numeric(factor(data$birthsite))
 unique(data$birthsite)
@@ -67,7 +69,7 @@ rain.sim <- seq(from = min(rain, na.rm = T), to = max(rain, na.rm = T), length.o
 rain.sim
 
 
-#Write linear mixed effects model for interaction between antlers and rain
+#Write linear mixed effects model for interaction between antlers and rain with age as a categorical variable
 set.seed(100)
 sink('ant.bs.rain.jags')
 cat('

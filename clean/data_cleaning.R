@@ -4,6 +4,24 @@ library(ggplot2)
 library(tidyverse)
 library(here)
 
+
+#Load dataset with no fawns, just animals with antlers
+data <- read.csv('./raw/bucks_nofawns.csv', header=T)
+head(data)
+data$year <- data$year_cap
+#load rainfall data in inches, november to october periods
+rain <- read.csv("C:/Users/Joe/Documents/R Projects/Survival/cleaned/rainfall.csv", header = T)
+
+merge <- merge(data, rain, by = c('year', 'birthsite'))
+data<- merge
+
+
+#replace zeros with NA
+data[data==0] <- NA
+
+write.csv(data, './clean/morpho_rain.csv', row.names = F)
+
+
 data<- read.csv('./clean/morpho_rain.csv', header = T)
 data1 <- data
 
