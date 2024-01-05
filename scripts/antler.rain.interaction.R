@@ -11,8 +11,10 @@ library(here)
 #Load dataset with no fawns, just animals with antlers
 data <- read.csv('./clean/morpho_rain.csv', header=T)
 head(data)
-data$year <- data$year_cap
 
+#create vector with dmp/rain combo for birthyear of individual
+unique(data$rain.site)
+bs.rain <- as.numeric(factor(data$rain.site)) #order dmp_1, dmp_2...wy_2, wy_3
 
 #create a vector with 1 for treatment, 2 for control, 3 for tgt
 bs<- as.numeric(factor(data$birthsite))

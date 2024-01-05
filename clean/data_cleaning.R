@@ -28,16 +28,29 @@ data1 <- data
 hist(data$annual)
 
 #determine top 75%, bottom 25% and median annual rainfall in inches
-data %>% summarise(q25 = quantile(annual, .25),
-                   median = median(annual),
-                   q75 = quantile(annual, .75))
+data %>% summarise(q25 = quantile(annual.birthyear, .25),
+                   median = median(annual.birthyear),
+                   q75 = quantile(annual.birthyear, .75))
+
+#now how to create a column with birthyear rain and site, .x is capyear rain, .y is birthyear rain
+merge <- merge(data, rain, by.x = c('birthsite','year_birth'), by.y = c('birthsite','year'))
+
+data<- merge[,c(1:12, 17, 19, 24)]
+data <- rename(data, 'annual.capyear' = 'annual.x', 'annual.birthyear'='annual.y', 
+               'rain.site.cy' = 'rain.site')
+
 
 #create a column with categorical rain values, 1 bottom 25%, 2 median, 3 top 75% rainfall
-data1$rain.cat <- ifelse(data1$annual <= 19.4, 1, ifelse(data1$annual >19.4 & data1$annual < 29.1, '2',
-                                                      ifelse(data1$annual>= 29.1, '3', NA)))
+data$rain.cat.by <- ifelse(data$annual.birthyear <= 18.3, 1, 
+                           ifelse(data$annual.birthyear >18.3 & data$annual.birthyear < 31.8, '2',
+                           ifelse(data$annual.birthyear>= 31.8, '3', NA)))
 
 #concatenate birthsite and categorical rain into one column with 9 levels
-data1$rain.site<- as.factor(paste(data1$birthsite, data1$rain.cat, sep = "_"))
+data$rain.site.by<- as.factor(paste(data$birthsite, data$rain.cat.by, sep = "_"))
+data<- data[,-16]
+data <- rename(data, 'annual.cy' = 'annual.capyear', 'annual.by'='annual.birthyear')
 
-write.csv(data1, './clean/morpho_rain.csv', row.names = F)
+write.csv(data, './clean/morpho_rain.csv', row.names = F)
+
+
 
