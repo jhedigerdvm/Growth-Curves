@@ -386,15 +386,15 @@ for (i in 1:n){
  mu[i] <- rain.beta*rain[i] + rain.bs.by.beta[rain.bs.by[i]] + age.beta[ageclass[i]] + rain.bs.by.age.beta[rain.bs.by[i]]*ageclass[i]
 }
 
-
-#derived parameter
-  for (i in 1:9){ #birthsite
-    for (j in 1:1000){ #rain sim
-        for (k in age){ #ageclasses
-      bcs[j,i,k] <- rain.beta*rain.sim[j] + rain.bs.by.beta[i] + age.beta[k] + rain.bs.by.age.beta[i] * ageclass[k]
-    }
-    }
-  }
+# 
+# #derived parameter
+#   for (i in 1:9){ #birthsite
+#     for (j in 1:1000){ #rain sim
+#         for (k in age){ #ageclasses
+#       bcs[j,i,k] <- rain.beta*rain.sim[j] + rain.bs.by.beta[i] + age.beta[k] + rain.bs.by.age.beta[i] * ageclass[k]
+#     }
+#     }
+#   }
 }
   
 ',fill = TRUE)
@@ -410,7 +410,7 @@ inits<- function(){list(rain.bs.by.beta = rnorm(9, 0, 1), age.beta = rnorm(12,0,
 #log normal pulls just positive values,ageclass.beta = rnorm(12,0,1), 
 
 #parameters to estimate
-parameters <- c('rain.bs.by.beta', 'rain.beta', 'age.beta', 'rain.bs.by.age.beta', 'bcs')#
+parameters <- c('rain.bs.by.beta', 'rain.beta', 'age.beta', 'rain.bs.by.age.beta')#, 'bcs'
 
 #MCMC settings
 ni <- 2000
