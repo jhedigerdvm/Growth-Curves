@@ -229,6 +229,7 @@ for (u in 1:9){ #birthsite
 }
 
 rain.beta ~ dnorm(0,0.001) #rain
+
 # 
 # for (u in 1:3) { #site and rain interaction
 #   rain.bs.beta[u] ~ dnorm(0, 0.001)
@@ -239,22 +240,23 @@ for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
  mu[i] <- rain.beta*rain[i] + rain.bs.by.beta[rain.bs.by[i]] + age.beta[ageclass[i]] #+ rain.bs.beta[bs[i]]*rain[i]
 }
-}
-# 
-# #derived parameter
-#   for (i in 1:3){ #birthsite
-#     for (j in 1:1000){ #rain sim
-#         for (k in age){ #ageclasses
-#       bcs[j,i,k] <- rain.beta*rain.sim[j] + bs.beta[i] + age.beta[k] + rain.bs.beta[i] * rain.sim[j]
-#     }
-#     }
 
+
+#derived parameter
+  for (i in 1:9){ #birthsite
+    for (j in 1:1000){ #rain sim
+        for (k in age){ #ageclasses
+      bcs[j,i,k] <- rain.beta*rain.sim[j] + rain.bs.by.beta[i] + age.beta[k] #+ rain.bs.beta[i] * rain.sim[j]
+    }
+    }
+  }
+}
   
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, antlers = antlerin, rain = rain.cy,
+jags.data <- list(n=n, antlers = antlerin, rain = rain.cy, age=age, rain.sim=rain.sim,
                   ageclass=ageclass, rain.bs.by=rain.bs.by) 
 
 #inits function
@@ -263,7 +265,7 @@ inits<- function(){list(rain.bs.by.beta = rnorm(9, 0, 1), age.beta = rnorm(12,0,
 #log normal pulls just positive values,ageclass.beta = rnorm(12,0,1), 
 
 #parameters to estimate
-parameters <- c('rain.bs.by.beta', 'rain.beta', 'age.beta')#
+parameters <- c('rain.bs.by.beta', 'rain.beta', 'age.beta', 'bcs')#
 
 #MCMC settings
 ni <- 2000
@@ -279,19 +281,20 @@ print(ant.rain.jags)
 
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
 #then index in the order from output so above was bcs[j,i,k], can rename accordingly
-gather<- ant.rain.jags %>% gather_draws(bcs[rain,site, age]) gather$site <- as.factor(gather$site)
+gather<- ant.rain.jags %>% gather_draws(bcs[rain,site,age]) 
+gather$site <- as.factor(gather$site)
 gather$age <- as.factor(gather$age)
 
 #find first row for 2nd rain value
-first_idx <- which(gather$rain == 2)[1] # 27000 values of rain 1
+first_idx <- which(gather$rain == 2)[1] # 81000 values of rain 1
 
 # unscale and uncenter rain.sim
-rain.sim1 <- (rain.sim * sd(data$annual)) + mean(data$annual)
+rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
 
 #create vector containing simulated rainfall data but in the format to sync up with gather
 vector1 <- numeric(0)
-rain.sim3 <- for (i in rain.sim1) {
-  rep_i <- rep(i, times = 27000)
+rain.sim2 <- for (i in rain.sim1) {
+  rep_i <- rep(i, times = 81000)
   vector1 <- c(vector1,rep_i)
   
 }
@@ -306,7 +309,7 @@ plot<- gather %>%
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
   scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
   scale_color_viridis_d()+ #color of line but no opacification
-  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain*site")+
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ rain + age + site")+
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.border = element_blank(),
@@ -321,7 +324,7 @@ plot<- gather %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/antler.facet.jpg', plot, width = 15, height = 10)
+# ggsave('./figures/antler.facet.jpg', plot, width = 15, height = 10)
 
 
 #plot with only age group 7
@@ -331,7 +334,7 @@ plot<- gather %>% filter(age == '7') %>%
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
   scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
   scale_color_viridis_d()+ #color of line but no opacification
-  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain*site")+
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain")+
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.border = element_blank(),
@@ -346,5 +349,5 @@ plot<- gather %>% filter(age == '7') %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/antler.rain.7.jpg', plot, width = 15, height = 10)
+# ggsave('./figures/antler.rain.7.jpg', plot, width = 15, height = 10)
 
