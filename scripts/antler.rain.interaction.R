@@ -61,6 +61,9 @@ nvalues <- 1000
 rain.sim <- seq(from = min(rain.cy, na.rm = T), to = max(rain.cy, na.rm = T), length.out = nvalues) #obtained to and from values from max and min of annual rainfall in data
 rain.sim
 
+#cap year and birth year rain
+rain.site.cy <- as.numeric(as.factor(data$rain.site.cy))
+rain.site.by <- as.numeric(as.factor(data$rain.site.by))
 
 #Write linear mixed effects model for antlers ~ age + site + rain + site*rain 
 set.seed(100)
@@ -345,6 +348,161 @@ plot<- gather %>% filter(age == '7') %>%
 ggsave('./figures/antler.rain.7a.jpg', plot, width = 15, height = 10)
 
 
+
+#Write linear mixed effects model for antlers ~ age + site + rain.site.cy + rain.site.by + rain.site.cy*rain.site.by + site*age
+
+
+set.seed(100)
+sink('rsbycy.jags')
+cat('
+model{
+  
+#priors
+
+for(u in 1:12){ #ageclass
+  age.beta[u] ~ dnorm(0,0.001)
+}
+
+sigma ~ dunif(0,100)
+tau <- 1/(sigma*sigma)
+
+for (u in 1:3){ #birthsite
+  bs.beta[u] ~ dnorm(0,0.001)
+}
+
+# rain.beta ~ dnorm(0,0.001) #rain
+
+for (u in 1:9){ #concatenated variable with cap year rain and birth site
+  bs.cy.beta[u] ~ dnorm(0, 0.001)
+}
+
+for (u in 1:9){ #concatenated variable with birth year rain and birth site
+  bs.by.beta[u] ~ dnorm(0, 0.001)
+}
+
+for (u in 1:9) { #early life conditions and adult conditions interaction
+  rain.bs.beta[u] ~ dnorm(0, 0.001)
+}
+
+for (u in 1:12) { #site and age interaction
+  age.bs.beta[u] ~ dnorm(0,0.001)
+}
+
+# Likelihood 
+for (i in 1:n){
+ antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
+ mu[i] <- bs.beta[bs[i]] + age.beta[ageclass[i]] + bs.cy.beta[rscy[i]] + bs.by.beta[rsby[i]] + rain.bs.beta[rscy[i]]*rsby[i] + age.bs.beta[ageclass[i]]*bs[i]
+}
+
+#derived parameter
+  for (i in 1:3){ #birthsite
+    for (j in 1:9){ #concat by and cy conditions
+        for (k in age){ #ageclasses
+      bcs[j,i,k] <- bs.beta[i] + age.beta[k] + bs.cy.beta[j] + bs.by.beta[j] + rain.bs.beta[j] * j + age.bs.beta[k] * i
+    }
+    }
+  }
+
+}   
+',fill = TRUE)
+sink()
+
+#bundle data
+jags.data <- list(n=n, bs = bs, antlers=antlerin, ageclass=ageclass, rscy=rain.site.cy, rsby=rain.site.by, age = age)#, rain.sim = rain.sim, age=age,
+
+#inits function
+inits<- function(){list(age.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1), bs.cy.beta = rnorm(9,0,1), bs.by.beta = rnorm(9,0,1), 
+                        rain.bs.beta = rnorm(9, 0, 1), age.bs.beta = rnorm(12,0,1), sigma = rlnorm(1))}
+#log normal pulls just positive values
+
+#parameters to estimate
+parameters <- c('bs.beta','age.beta', 'bs.cy.beta','bs.by.beta', 'rain.bs.beta', 'age.bs.beta', 'bcs' )
+
+#MCMC settings
+ni <- 2000
+nb <- 1000
+nt<- 1
+nc <- 3
+
+rsbycy.jags<- jagsUI(jags.data, inits, parameters, 'rsbycy.jags', n.thin = nt, n.chains = nc, 
+                              n.burnin = nb, n.iter = ni)
+print(rsbycy.jags)
+
+
+#gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
+#then index in the order from output so above was bcs[j,i,k], can rename accordingly
+gather<- rsbycy.jags %>% gather_draws(bcs[conditions, site, age]) 
+gather$conditions <- as.factor(gather$conditions)
+gather$site <- as.factor(gather$site)
+gather$age <- as.factor(gather$age)
+
+#find first row for 2nd rain value
+first_idx <- which(gather$conditions == 2)[1] # 27000 values of rain 1
+# 
+# # unscale and uncenter rain.sim
+# rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
+# 
+# #create vector containing simulated rainfall data but in the format to sync up with gather
+# vector1 <- numeric(0)
+# rain.sim3 <- for (i in rain.sim1) {
+#   rep_i <- rep(i, times = 27000)
+#   vector1 <- c(vector1,rep_i)
+#   
+# }
+# 
+# gather$rain1 <- vector1
+
+
+#plot with age groups 1, 7, 10
+plot<- gather %>%
+  ggplot(aes(x=rain1, y=.value, color = site, fill = site)) +
+  facet_wrap(vars(age), nrow = 1)+
+  stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
+  scale_fill_viridis_d(alpha = .2, labels = c('dmp', 'ey', 'wy')) + #this allowed me to opacify the ribbon but not the line
+  scale_color_viridis_d(labels = c('dmp', 'ey', 'wy'))+ #color of line but no opacification
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ rain.cy + age + site + rain*site + age*site")+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(),
+        legend.position = c(0.5,0.3),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 28),
+        plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+        axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
+        axis.text = element_text(face='bold',size = 28),
+        # axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill='transparent'), #transparent panel bg
+        plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
+
+ggsave('./figures/antler.facet1.jpg', plot, width = 15, height = 10)
+
+
+#plot with only age group 7
+plot<- gather %>% filter(age == '7') %>%
+  ggplot(aes(x=rain1, y=.value, color = site, fill = site)) +
+  facet_wrap(vars(age), nrow = 1)+
+  stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
+  scale_fill_viridis_d(alpha = .2, labels = c('dmp', 'ey', 'wy')) + #this allowed me to opacify the ribbon but not the line
+  scale_color_viridis_d(labels = c('dmp', 'ey', 'wy'))+ #color of line but no opacification
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ rain + age(7) + site + rain*site + age*site")+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(),
+        legend.position = c(0.1,0.9),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 28),
+        plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+        axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
+        axis.text = element_text(face='bold',size = 28),
+        # axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill='transparent'), #transparent panel bg
+        plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
+
+ggsave('./figures/antler.rain.7a.jpg', plot, width = 15, height = 10)
+
+###############################
 #model for  birthsite/birthyear rain and current rain with age as a categorical variable
 set.seed(100)
 sink('rain.bs.by.jags')
