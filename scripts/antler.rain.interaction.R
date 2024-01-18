@@ -349,7 +349,7 @@ ggsave('./figures/antler.rain.7a.jpg', plot, width = 15, height = 10)
 
 
 
-#Write linear mixed effects model for antlers ~ age + site + rain.site.cy + rain.site.by + rain.site.cy*rain.site.by + site*age
+#Write linear mixed effects model for antlers ~ rain + age + site + rain.site.cy + rain.site.by + rain.site.cy*rain.site.by + site*age
 
 
 set.seed(100)
@@ -370,7 +370,7 @@ for (u in 1:3){ #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
 }
 
-# rain.beta ~ dnorm(0,0.001) #rain
+rain.beta ~ dnorm(0,0.001) #rain
 
 for (u in 1:9){ #concatenated variable with cap year rain and birth site
   bs.cy.beta[u] ~ dnorm(0, 0.001)
@@ -391,32 +391,33 @@ for (u in 1:12) { #site and age interaction
 # Likelihood 
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- bs.beta[bs[i]] + age.beta[ageclass[i]] + bs.cy.beta[rscy[i]] + bs.by.beta[rsby[i]] + rain.bs.beta[rscy[i]]*rsby[i] + age.bs.beta[ageclass[i]]*bs[i]
+ mu[i] <- rain.beta*rain.cy[i] + bs.beta[bs[i]] + age.beta[ageclass[i]] + bs.cy.beta[rscy[i]] + bs.by.beta[rsby[i]] + rain.bs.beta[rscy[i]]*rsby[i] + age.bs.beta[ageclass[i]]*bs[i]
 }
 
 #derived parameter
   for (i in 1:3){ #birthsite
     for (j in 1:9){ #concat by and cy conditions
         for (k in age){ #ageclasses
-      bcs[j,i,k] <- bs.beta[i] + age.beta[k] + bs.cy.beta[j] + bs.by.beta[j] + rain.bs.beta[j] * j + age.bs.beta[k] * i
+          for (h in 1:1000){
+      bcs[h,j,i,k] <- rain.beta*rain.sim[h] + bs.beta[i] + age.beta[k] + bs.cy.beta[j] + bs.by.beta[j] + rain.bs.beta[j] * j + age.bs.beta[k] * i
     }
     }
   }
-
+}
 }   
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, bs = bs, antlers=antlerin, ageclass=ageclass, rscy=rain.site.cy, rsby=rain.site.by, age = age)#, rain.sim = rain.sim, age=age,
+jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rscy=rain.site.cy, rsby=rain.site.by, age=age, rain.sim=rain.sim)#, rain.sim = rain.sim, age=age,
 
 #inits function
-inits<- function(){list(age.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1), bs.cy.beta = rnorm(9,0,1), bs.by.beta = rnorm(9,0,1), 
+inits<- function(){list(rain.beta = rnorm(1, 0, 1), age.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1), bs.cy.beta = rnorm(9,0,1), bs.by.beta = rnorm(9,0,1), 
                         rain.bs.beta = rnorm(9, 0, 1), age.bs.beta = rnorm(12,0,1), sigma = rlnorm(1))}
 #log normal pulls just positive values
 
 #parameters to estimate
-parameters <- c('bs.beta','age.beta', 'bs.cy.beta','bs.by.beta', 'rain.bs.beta', 'age.bs.beta', 'bcs' )
+parameters <- c('rain.beta', 'bs.beta','age.beta', 'bs.cy.beta','bs.by.beta', 'rain.bs.beta', 'age.bs.beta', 'bcs' )
 
 #MCMC settings
 ni <- 2000
@@ -431,26 +432,26 @@ print(rsbycy.jags)
 
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
 #then index in the order from output so above was bcs[j,i,k], can rename accordingly
-gather<- rsbycy.jags %>% gather_draws(bcs[conditions, site, age]) 
+gather<- rsbycy.jags %>% gather_draws(bcs[rain, conditions, site, age]) 
 gather$conditions <- as.factor(gather$conditions)
 gather$site <- as.factor(gather$site)
 gather$age <- as.factor(gather$age)
 
 #find first row for 2nd rain value
 first_idx <- which(gather$conditions == 2)[1] # 27000 values of rain 1
-# 
-# # unscale and uncenter rain.sim
-# rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
-# 
-# #create vector containing simulated rainfall data but in the format to sync up with gather
-# vector1 <- numeric(0)
-# rain.sim3 <- for (i in rain.sim1) {
-#   rep_i <- rep(i, times = 27000)
-#   vector1 <- c(vector1,rep_i)
-#   
-# }
-# 
-# gather$rain1 <- vector1
+
+# unscale and uncenter rain.sim
+rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
+
+#create vector containing simulated rainfall data but in the format to sync up with gather
+vector1 <- numeric(0)
+rain.sim3 <- for (i in rain.sim1) {
+  rep_i <- rep(i, times = 27000)
+  vector1 <- c(vector1,rep_i)
+
+}
+
+gather$rain1 <- vector1
 
 
 #plot with age groups 1, 7, 10
