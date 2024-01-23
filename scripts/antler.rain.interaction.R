@@ -438,7 +438,7 @@ gather$site <- as.factor(gather$site)
 gather$age <- as.factor(gather$age)
 
 #find first row for 2nd rain value
-first_idx <- which(gather$conditions == 2)[1] # 27000 values of rain 1
+first_idx <- which(gather$rain == 2)[1] # 27000 values of rain 1
 
 # unscale and uncenter rain.sim
 rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
@@ -446,7 +446,7 @@ rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
 #create vector containing simulated rainfall data but in the format to sync up with gather
 vector1 <- numeric(0)
 rain.sim3 <- for (i in rain.sim1) {
-  rep_i <- rep(i, times = 27000)
+  rep_i <- rep(i, times = 243000)
   vector1 <- c(vector1,rep_i)
 
 }
@@ -599,7 +599,7 @@ gather$rain1 <- vector1
 
 #plot with age groups 1, 7, 10
 plot<- gather %>%
-  ggplot(aes(x=rain1, y=.value, color = site, fill = site)) +
+  ggplot(aes(x=rain1, y=.value, color = conditions, fill = conditions)) +
   facet_wrap(vars(age), nrow = 1)+
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
   scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
@@ -619,7 +619,7 @@ plot<- gather %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-# ggsave('./figures/antler.facet.jpg', plot, width = 15, height = 10)
+ggsave('./figures/antler.facet1.jpg', plot, width = 15, height = 10)
 
 
 #plot with only age group 7
