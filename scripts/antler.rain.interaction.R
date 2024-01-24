@@ -360,7 +360,7 @@ model{
 #priors
 
 for(u in 1:12){ #ageclass
-  age.beta[u] ~ dnorm(0,0.001)
+  age.beta[u] ~ dlnorm(0,0.001)
 }
 
 sigma ~ dunif(0,100)
@@ -370,22 +370,22 @@ tau <- 1/(sigma*sigma)
 #   bs.beta[u] ~ dnorm(0,0.001)
 # }
 
-rain.beta ~ dnorm(0,0.001) #rain
+rain.beta ~ dlnorm(0,0.001) #rain
 # 
 # for (u in 1:9){ #concatenated variable with cap year rain and birth site
 #   bs.cy.beta[u] ~ dnorm(0, 0.001)
 # }
 
 for (u in 1:9){ #concatenated variable with birth year rain and birth site
-  elc.beta[u] ~ dnorm(0, 0.001)
+  elc.beta[u] ~ dlnorm(0, 0.001)
 }
 
 for (u in 1:9) { #early life conditions and adult conditions interaction
-  elc.alc.beta[u] ~ dnorm(0, 0.001)
+  elc.alc.beta[u] ~ dlnorm(0, 0.001)
 }
 
 for (u in 1:12) { #site and age interaction
-  elc.age.beta[u] ~ dnorm(0,0.001)
+  elc.age.beta[u] ~ dlnorm(0,0.001)
 }
 
 # Likelihood 
@@ -412,8 +412,12 @@ sink()
 jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rsby=rain.site.by, age=age, rain.sim=rain.sim)#, rain.sim = rain.sim, age=age,
 
 #inits function
-inits<- function(){list(rain.beta = rnorm(1, 0, 1), age.beta = rnorm(12,0,1), elc.beta = rnorm(9,0,1),  
-                        elc.alc.beta = rnorm(9, 0, 1), elc.age.beta = rnorm(12,0,1), sigma = rlnorm(1))}
+inits<- function(){list(rain.beta = rlnorm(1), age.beta = rlnorm(12), elc.beta = rlnorm(9),  
+                        elc.alc.beta = rlnorm(9), elc.age.beta = rlnorm(12), sigma = rlnorm(1))}
+# 
+# rain.beta = rnorm(1, 0, 1), age.beta = rnorm(12,0,1), elc.beta = rnorm(9,0,1),  
+# elc.alc.beta = rnorm(9, 0, 1), elc.age.beta = rnorm(12,0,1), sigma = rlnorm(1))
+
 #log normal pulls just positive values
 
 #parameters to estimate

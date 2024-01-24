@@ -4,7 +4,7 @@ model{
 #priors
 
 for(u in 1:12){ #ageclass
-  age.beta[u] ~ dnorm(0,0.001)
+  age.beta[u] ~ dlnorm(0,0.001)
 }
 
 sigma ~ dunif(0,100)
@@ -14,27 +14,27 @@ tau <- 1/(sigma*sigma)
 #   bs.beta[u] ~ dnorm(0,0.001)
 # }
 
-rain.beta ~ dnorm(0,0.001) #rain
+rain.beta ~ dlnorm(0,0.001) #rain
 # 
 # for (u in 1:9){ #concatenated variable with cap year rain and birth site
 #   bs.cy.beta[u] ~ dnorm(0, 0.001)
 # }
 
 for (u in 1:9){ #concatenated variable with birth year rain and birth site
-  elc.beta[u] ~ dnorm(0, 0.001)
+  elc.beta[u] ~ dlnorm(0, 0.001)
 }
 
 for (u in 1:9) { #early life conditions and adult conditions interaction
-  elc.alc.beta[u] ~ dnorm(0, 0.001)
+  elc.alc.beta[u] ~ dlnorm(0, 0.001)
 }
 
 for (u in 1:12) { #site and age interaction
-  elc.age.beta[u] ~ dnorm(0,0.001)
+  elc.age.beta[u] ~ dlnorm(0,0.001)
 }
 
 # Likelihood 
 for (i in 1:n){
- antlers[i] ~ dlnorm(mu[i], tau) #each antler is a draw from this distribution
+ antlers[i] ~ dlnorm(mu[i], tau) #each antler is a draw from this distribution, CHANGED TO LOG NORMAL
  mu[i] <- rain.beta*rain.cy[i]  + age.beta[ageclass[i]] + elc.beta[rsby[i]]  + elc.alc.beta[rsby[i]]*rain.cy[i] + elc.age.beta[rsby[i]]*ageclass[i]
 }
 # 
