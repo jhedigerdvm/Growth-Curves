@@ -390,7 +390,7 @@ for (u in 1:12) { #site and age interaction
 
 # Likelihood 
 for (i in 1:n){
- antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
+ antlers[i] ~ dlnorm(mu[i], tau) #each antler is a draw from this distribution, CHANGED TO LOG NORMAL
  mu[i] <- rain.beta*rain.cy[i]  + age.beta[ageclass[i]] + elc.beta[rsby[i]]  + elc.alc.beta[rsby[i]]*rain.cy[i] + elc.age.beta[rsby[i]]*ageclass[i]
 }
 # 
