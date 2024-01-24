@@ -360,7 +360,7 @@ model{
 #priors
 
 for(u in 1:12){ #ageclass
-  age.beta[u] ~ dlnorm(0,0.001)
+  age.beta[u] ~ dnorm(0,0.001)
 }
 
 sigma ~ dunif(0,100)
@@ -377,15 +377,15 @@ rain.beta ~ dlnorm(0,0.001) #rain
 # }
 
 for (u in 1:9){ #concatenated variable with birth year rain and birth site
-  elc.beta[u] ~ dlnorm(0, 0.001)
+  elc.beta[u] ~ dnorm(0, 0.001)
 }
 
 for (u in 1:9) { #early life conditions and adult conditions interaction
-  elc.alc.beta[u] ~ dlnorm(0, 0.001)
+  elc.alc.beta[u] ~ dnorm(0, 0.001)
 }
 
 for (u in 1:12) { #site and age interaction
-  elc.age.beta[u] ~ dlnorm(0,0.001)
+  elc.age.beta[u] ~ dnorm(0,0.001)
 }
 
 # Likelihood 
@@ -412,11 +412,12 @@ sink()
 jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rsby=rain.site.by, age=age, rain.sim=rain.sim)#, rain.sim = rain.sim, age=age,
 
 #inits function
-inits<- function(){list(rain.beta = rlnorm(1), age.beta = rlnorm(12), elc.beta = rlnorm(9),  
-                        elc.alc.beta = rlnorm(9), elc.age.beta = rlnorm(12), sigma = rlnorm(1))}
+inits<- function(){list(rain.beta = rlnorm(1), age.beta = rnorm(12,0,1), elc.beta = rnorm(9,0,1),
+elc.alc.beta = rnorm(9, 0, 1), elc.age.beta = rnorm(12,0,1), sigma = rlnorm(1))}
 # 
-# rain.beta = rnorm(1, 0, 1), age.beta = rnorm(12,0,1), elc.beta = rnorm(9,0,1),  
-# elc.alc.beta = rnorm(9, 0, 1), elc.age.beta = rnorm(12,0,1), sigma = rlnorm(1))
+# 
+# (rain.beta = rlnorm(1), age.beta = rlnorm(12), elc.beta = rlnorm(9),  
+#   elc.alc.beta = rlnorm(9), elc.age.beta = rlnorm(12), sigma = rlnorm(1)
 
 #log normal pulls just positive values
 
@@ -424,7 +425,7 @@ inits<- function(){list(rain.beta = rlnorm(1), age.beta = rlnorm(12), elc.beta =
 parameters <- c('rain.beta', 'age.beta', 'elc.beta','elc.alc.beta', 'elc.age.beta', 'bcs' )
 
 #MCMC settings
-ni <- 2000
+ni <- 4000
 nb <- 1000
 nt<- 1
 nc <- 3
@@ -433,6 +434,7 @@ rsbycy.jags<- jagsUI(jags.data, inits, parameters, 'rsbycy.jags', n.thin = nt, n
                               n.burnin = nb, n.iter = ni)
 print(rsbycy.jags)
 
+MCMCtrace(rsbycy.jags)
 
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
 #then index in the order from output so above was bcs[j,i,k], can rename accordingly
