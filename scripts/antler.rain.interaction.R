@@ -349,7 +349,7 @@ ggsave('./figures/antler.rain.7a.jpg', plot, width = 15, height = 10)
 
 
 
-#Write linear mixed effects model for antlers ~ rain + age + site + rain.site.cy + rain.site.by + rain.site.cy*rain.site.by + site*age
+#Write linear mixed effects model for antlers ~ rain + age + ELC + ELC*age + ELC*rain
 
 
 set.seed(100)
@@ -365,59 +365,59 @@ for(u in 1:12){ #ageclass
 
 sigma ~ dunif(0,100)
 tau <- 1/(sigma*sigma)
-
-for (u in 1:3){ #birthsite
-  bs.beta[u] ~ dnorm(0,0.001)
-}
+# 
+# for (u in 1:3){ #birthsite
+#   bs.beta[u] ~ dnorm(0,0.001)
+# }
 
 rain.beta ~ dnorm(0,0.001) #rain
-
-for (u in 1:9){ #concatenated variable with cap year rain and birth site
-  bs.cy.beta[u] ~ dnorm(0, 0.001)
-}
+# 
+# for (u in 1:9){ #concatenated variable with cap year rain and birth site
+#   bs.cy.beta[u] ~ dnorm(0, 0.001)
+# }
 
 for (u in 1:9){ #concatenated variable with birth year rain and birth site
-  bs.by.beta[u] ~ dnorm(0, 0.001)
+  elc.beta[u] ~ dnorm(0, 0.001)
 }
 
 for (u in 1:9) { #early life conditions and adult conditions interaction
-  rain.bs.beta[u] ~ dnorm(0, 0.001)
+  elc.alc.beta[u] ~ dnorm(0, 0.001)
 }
 
 for (u in 1:12) { #site and age interaction
-  age.bs.beta[u] ~ dnorm(0,0.001)
+  elc.age.beta[u] ~ dnorm(0,0.001)
 }
 
 # Likelihood 
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- rain.beta*rain.cy[i] + bs.beta[bs[i]] + age.beta[ageclass[i]] + bs.cy.beta[rscy[i]] + bs.by.beta[rsby[i]] + rain.bs.beta[rscy[i]]*rsby[i] + age.bs.beta[ageclass[i]]*bs[i]
+ mu[i] <- rain.beta*rain.cy[i]  + age.beta[ageclass[i]] + elc.beta[rsby[i]]  + elc.alc.beta[rsby[i]]*rain.cy[i] + elc.age.beta[rsby[i]]*ageclass[i]
 }
-
-#derived parameter
-  for (i in 1:3){ #birthsite
-    for (j in 1:9){ #concat by and cy conditions
-        for (k in age){ #ageclasses
-          for (h in 1:1000){
-      bcs[h,j,i,k] <- rain.beta*rain.sim[h] + bs.beta[i] + age.beta[k] + bs.cy.beta[j] + bs.by.beta[j] + rain.bs.beta[j] * j + age.bs.beta[k] * i
-    }
-    }
-  }
-}
+# 
+# #derived parameter
+#   for (i in 1:3){ #birthsite
+#     for (j in 1:9){ #concat by and cy conditions
+#         for (k in age){ #ageclasses
+#           for (h in 1:1000){
+#       bcs[h,j,i,k] <- rain.beta*rain.sim[h] + bs.beta[i] + age.beta[k] + bs.cy.beta[j] + bs.by.beta[j] + rain.bs.beta[j] * j + age.bs.beta[k] * i
+#     }
+#     }
+#   }
+# }
 }   
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rscy=rain.site.cy, rsby=rain.site.by, age=age, rain.sim=rain.sim)#, rain.sim = rain.sim, age=age,
+jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rsby=rain.site.by, age=age, rain.sim=rain.sim)#, rain.sim = rain.sim, age=age,
 
 #inits function
-inits<- function(){list(rain.beta = rnorm(1, 0, 1), age.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1), bs.cy.beta = rnorm(9,0,1), bs.by.beta = rnorm(9,0,1), 
-                        rain.bs.beta = rnorm(9, 0, 1), age.bs.beta = rnorm(12,0,1), sigma = rlnorm(1))}
+inits<- function(){list(rain.beta = rnorm(1, 0, 1), age.beta = rnorm(12,0,1), elc.beta = rnorm(9,0,1),  
+                        elc.alc.beta = rnorm(9, 0, 1), elc.age.beta = rnorm(12,0,1), sigma = rlnorm(1))}
 #log normal pulls just positive values
 
 #parameters to estimate
-parameters <- c('rain.beta', 'bs.beta','age.beta', 'bs.cy.beta','bs.by.beta', 'rain.bs.beta', 'age.bs.beta', 'bcs' )
+parameters <- c('rain.beta', 'age.beta', 'elc.beta','elc.alc.beta', 'elc.age.beta', 'bcs' )
 
 #MCMC settings
 ni <- 2000
