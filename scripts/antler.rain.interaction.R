@@ -70,37 +70,42 @@ rain.by<- as.numeric(as.factor(data$rain.by))
 # #cap year and birth year rain
 # rain.site.cy <- as.numeric(as.factor(data$rain.site.cy))
 # rain.site.by <- as.numeric(as.factor(data$rain.site.by))
-# 
-# #Write linear mixed effects model for antlers ~ age + site + rain + site*rain 
-# set.seed(100)
-# sink('ant.bs.rain.jags')
-# cat('
-# model{
-#   
-# #priors
-# 
-# for(u in 1:12){ #ageclass
-#   age.beta[u] ~ dnorm(0,0.001)
-# }
-# 
-# sigma ~ dunif(0,10)
-# tau <- 1/(sigma*sigma)
-# 
-# for (u in 1:3){ #birthsite
-#   bs.beta[u] ~ dnorm(0,0.001)
-# }
-# 
-# rain.beta ~ dnorm(0,0.001) #rain
-# 
-# for (u in 1:3) { #site and rain interaction
-#   rain.bs.beta[u] ~ dnorm(0, 0.001)
-# }
-# 
-# # Likelihood 
-# for (i in 1:n){
-#  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
-#  mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + age.beta[ageclass[i]] + rain.bs.beta[bs[i]]*rain[i]
-# }
+
+#Write linear mixed effects model for antlers ~ age + site + rain + site*rain
+set.seed(100)
+sink('ant.bs.rain.jags')
+cat('
+model{
+
+#priors
+
+for(u in 1:12){ #ageclass
+  age.beta[u] ~ dnorm(0,0.001)
+}
+
+sigma ~ dunif(0,10)
+tau <- 1/(sigma*sigma)
+
+for (u in 1:3){ #birthsite
+  bs.beta[u] ~ dnorm(0,0.001)
+}
+
+rain.beta ~ dnorm(0,0.001) #rain
+
+for (u in 1:3){     #birth year rain
+  rain.by.beta[u] ~ dnorm(0,0.001)
+}
+  
+for (u in 1:3) { #site and rain interaction
+  interaction.beta[u] ~ dnorm(0, 0.001)
+}
+
+# Likelihood
+for (i in 1:n){
+ antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
+ mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + interaction.beta[bs[i]]*rain[i]
+}
+
 # 
 # #derived parameter
 #   for (i in 1:3){ #birthsite
@@ -110,31 +115,32 @@ rain.by<- as.numeric(as.factor(data$rain.by))
 #     }
 #     }
 #   }
-# 
-# }   
-# ',fill = TRUE)
-# sink()
-# 
-# #bundle data
-# jags.data <- list(n=n, bs = bs, antlers = antlerin, rain = rain.cy, age=age, ageclass = ageclass, rain.sim = rain.sim)
-# 
-# #inits function
-# inits<- function(){list(bs.beta = rnorm(3, 0, 1), rain.bs.beta = rnorm(3, 0, 1), 
-#                         rain.beta = rnorm(1,0,1), sigma = rlnorm(1), age.beta = rnorm(12,0,1))}
-#                          #log normal pulls just positive values
-# 
-# #parameters to estimate
-# parameters <- c('bs.beta', 'rain.beta', 'age.beta', 'rain.bs.beta', 'bcs')#
-# 
-# #MCMC settings
-# ni <- 2000
-# nb <- 1000
-# nt<- 1
-# nc <- 3
-# 
-# ant.rain.jags<- jagsUI(jags.data, inits, parameters, 'ant.bs.rain.jags', n.thin = nt, n.chains = nc, 
-#                   n.burnin = nb, n.iter = ni)
-# print(ant.rain.jags)
+
+}
+',fill = TRUE)
+sink()
+
+#bundle data
+jags.data <- list(n=n, bs = bs, rain.by = rain.by, antlers = antlerin, rain = rain.cy, age=age, ageclass = ageclass, 
+                  rain.sim = rain.sim)
+
+#inits function
+inits<- function(){list(bs.beta = rnorm(3, 0, 1), interaction.beta = rnorm(3, 0, 1), rain.by.beta = rnorm(3,0,1),
+                        rain.beta = rnorm(1,0,1), sigma = rlnorm(1), age.beta = rnorm(12,0,1))}
+                         #log normal pulls just positive values
+
+#parameters to estimate
+parameters <- c('bs.beta', 'rain.beta', 'rain.by.beta', 'age.beta', 'interaction.beta', 'bcs')#
+
+#MCMC settings
+ni <- 2000
+nb <- 1000
+nt<- 1
+nc <- 3
+
+ant.rain.jags<- jagsUI(jags.data, inits, parameters, 'ant.bs.rain.jags', n.thin = nt, n.chains = nc,
+                  n.burnin = nb, n.iter = ni)
+print(ant.rain.jags)
 # MCMCtrace(lme.jags)
 # write.csv(lme.jags$summary, 'antlers.bs.age.intrxn.csv')
 
