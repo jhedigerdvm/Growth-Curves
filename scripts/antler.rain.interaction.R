@@ -12,9 +12,9 @@ library(here)
 data <- read.csv('./clean/morpho_rain.csv', header=T)
 head(data)
 
-#create vector with dmp/rain combo for birthyear of individual
-unique(data$rain.site.by)
-rain.bs.by <- as.numeric(as.factor(data$rain.site.by))
+# #create vector with dmp/rain combo for birthyear of individual
+# unique(data$rain.site.by)
+# rain.bs.by <- as.numeric(as.factor(data$rain.site.by))
 
 #create a vector with 1 for treatment, 2 for control, 3 for tgt
 bs<- as.numeric(factor(data$birthsite))
@@ -356,9 +356,9 @@ rain.by<- as.numeric(data$rain.by)
 
 
 #Write linear mixed effects model for antlers ~ rain + age + ELC + ELC*age + ELC*rain
-#LP version: early_life[site[i]] + early_rainfall[rain_level[i]] + 
-#           beta.rain * current_rainfall[i,j] + beta.age[age[i,j]] +
-#           beta.interaction[site[i], rain_level[j]] * current_rainfall[i,j]
+#LP version: bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + 
+#           rain.beta * rain.cy[i,j] + age.beta[ageclass[i,j]] +
+#           interaction.beta[bs[i], rain.by[j]] * rain.cy[i,j]
 # dont concatenate because it takes away from the individual contribution of the two variables to explain the variance 
 set.seed(100)
 sink('rsbycy.jags')
@@ -367,21 +367,24 @@ model{
   
 #priors
 
-for(u in 1:12){                     #ageclass
+age.beta[1] <- 0
+for(u in 2:12){                        #ageclass
   age.beta[u] ~ dnorm(0,0.001)
 }
 
 sigma ~ dunif(0,100)
 tau <- 1/(sigma*sigma)
 
-for (u in 1:3){                   #birthsite
+bs.beta[1] <- 0
+for (u in 2:3){                         #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
 }
 
-rain.beta ~ dnorm(0,0.001)        #rain
+rain.beta ~ dnorm(0,0.001)              #rain
 
-for (u in 1:3){                         # birth year rain
-  rain.by.beta ~ dnorm (0,0.001)
+rain.by.beta[1] <- 0
+for (u in 2:3){                         # birth year rain
+  rain.by.beta ~ dnorm(0,0.001)
 }
 
 # for (u in 1:9){
@@ -390,7 +393,7 @@ for (u in 1:3){                         # birth year rain
 
 for(i in 1:3){ #site
   for(j in 1:3){  #birth rain
-    interaction.beta[bs[i], rain.by[j]] ~ dnorm(0,0.001)
+    interaction.beta[i,j] ~ dnorm(0,0.001)
   }
 }
 
@@ -423,7 +426,7 @@ sink()
 jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rain.by = rain.by )#, age=age, rain.sim=rain.simrain.sim = rain.sim, age=age,
 
 #inits function
-inits<- function(){list(bs.beta = rnorm(3,0,1), rain.beta = rnorm(1,0,1), age.beta = rnorm(12,0,1), rain.by.beta = rnorm(3,0,1),
+inits<- function(){list(bs.beta = c(NA,rnorm(2,0,1)), rain.beta = rnorm(1,0,1), age.beta = c(NA,rnorm(11,0,1)), rain.by.beta = c(NA,rnorm(2,0,1)),
                                   interaction.beta = rnorm(9, 0, 1), age.site.beta = rnorm(12,0,1), sigma = rlnorm(1))}
 
 #log normal pulls just positive values

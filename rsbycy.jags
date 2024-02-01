@@ -3,21 +3,24 @@ model{
   
 #priors
 
-for(u in 1:12){                     #ageclass
+age.beta[1] <- 0
+for(u in 2:12){                        #ageclass
   age.beta[u] ~ dnorm(0,0.001)
 }
 
 sigma ~ dunif(0,100)
 tau <- 1/(sigma*sigma)
 
-for (u in 1:3){                   #birthsite
+bs.beta[1] <- 0
+for (u in 2:3){                         #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
 }
 
-rain.beta ~ dnorm(0,0.001)        #rain
+rain.beta ~ dnorm(0,0.001)              #rain
 
-for (u in 1:3){                         # birth year rain
-  rain.by.beta ~ dnorm (0,0.001)
+rain.by.beta[1] <- 0
+for (u in 2:3){                         # birth year rain
+  rain.by.beta ~ dnorm(0,0.001)
 }
 
 # for (u in 1:9){
@@ -26,7 +29,7 @@ for (u in 1:3){                         # birth year rain
 
 for(i in 1:3){ #site
   for(j in 1:3){  #birth rain
-    interaction.beta[bs[i], rain.by[j]] ~ dnorm(0,0.001)
+    interaction.beta[i,j] ~ dnorm(0,0.001)
   }
 }
 
