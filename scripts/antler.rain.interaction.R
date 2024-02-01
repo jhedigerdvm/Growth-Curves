@@ -96,14 +96,17 @@ for (u in 1:3){     #birth year rain
   rain.by.beta[u] ~ dnorm(0,0.001)
 }
   
-for (u in 1:3) { #site and rain interaction
-  interaction.beta[u] ~ dnorm(0, 0.001)
+for (u in 1:3) { #site
+  for (j in 1:3){ # birth year rain
+    interaction.beta[u,j] ~ dnorm(0, 0.001)
+  }
 }
 
 # Likelihood
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + interaction.beta[bs[i]]*rain[i]
+ mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + 
+                                                      interaction.beta[bs[i],rain.by[i]]*rain[i]
 }
 
 # 
@@ -125,9 +128,9 @@ jags.data <- list(n=n, bs = bs, rain.by = rain.by, antlers = antlerin, rain = ra
                   rain.sim = rain.sim)
 
 #inits function
-inits<- function(){list(bs.beta = rnorm(3, 0, 1), interaction.beta = rnorm(3, 0, 1), rain.by.beta = rnorm(3,0,1),
+inits<- function(){list(bs.beta = rnorm(3, 0, 1),  rain.by.beta = rnorm(3,0,1),
                         rain.beta = rnorm(1,0,1), sigma = rlnorm(1), age.beta = rnorm(12,0,1))}
-                         #log normal pulls just positive values
+                         #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),
 
 #parameters to estimate
 parameters <- c('bs.beta', 'rain.beta', 'rain.by.beta', 'age.beta', 'interaction.beta', 'bcs')#

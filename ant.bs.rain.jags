@@ -20,14 +20,17 @@ for (u in 1:3){     #birth year rain
   rain.by.beta[u] ~ dnorm(0,0.001)
 }
   
-for (u in 1:3) { #site and rain interaction
-  interaction.beta[u] ~ dnorm(0, 0.001)
+for (u in 1:3) { #site
+  for (j in 1:3){ # birth year rain
+    interaction.beta[u,j] ~ dnorm(0, 0.001)
+  }
 }
 
 # Likelihood
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + interaction.beta[bs[i]]*rain[i]
+ mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + 
+                                                      interaction.beta[bs[i],rain.by[i]]*rain[i]
 }
 
 # 
