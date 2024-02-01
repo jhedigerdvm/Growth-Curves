@@ -65,7 +65,7 @@ data$rain.by <- as.factor(ifelse(data$annual.by <= 18.3, 1,
                     ifelse(data$annual.by >18.3 & data$annual.by < 31.8, '2',
                         ifelse(data$annual.by>= 31.8, '3', NA))))
 
-rain.by<- as.numeric(data$rain.by)
+rain.by<- as.integer(data$rain.by)
 
 # #cap year and birth year rain
 # rain.site.cy <- as.numeric(as.factor(data$rain.site.cy))
@@ -382,7 +382,7 @@ for (u in 2:3){                         #birthsite
 
 rain.beta ~ dnorm(0,0.001)              #rain
 
-rain.by.beta[1] <- 0
+rain.by.beta[1]<-0
 for (u in 2:3){                         # birth year rain
   rain.by.beta ~ dnorm(0,0.001)
 }
@@ -390,12 +390,12 @@ for (u in 2:3){                         # birth year rain
 # for (u in 1:9){
 #   interaction.beta ~ dnorm(0, 0.001)
 # }
-
-for(i in 1:3){ #site
-  for(j in 1:3){  #birth rain
-    interaction.beta[i,j] ~ dnorm(0,0.001)
-  }
-}
+# 
+# for(i in 1:3){ #site
+#   for(j in 1:3){  #birth rain
+#     interaction.beta[i,j] ~ dnorm(0,0.001)
+#   }
+# }
 
 # for (u in 1:12){      #age site interaction
 #   age.site.beta ~ dnorm(0, 0.001)
@@ -404,8 +404,8 @@ for(i in 1:3){ #site
 # Likelihood 
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution, CHANGED TO LOG NORMAL, log link function
- mu[i] <- bs.beta[bs[i]] + age.beta[ageclass[i]] + rain.beta*rain.cy[i] + rain.by.beta[rain.by[i]] +
-                  interaction.beta[bs[i],rain.by[i]]*rain.cy[i] #+ age.site.beta[ageclass[i]]*bs[i]
+ mu[i] <- bs.beta[bs[i]] + age.beta[ageclass[i]] + rain.beta*rain.cy[i] + rain.by.beta[rain.by[i]] #+
+                  #interaction.beta[bs[i],rain.by[i]]*rain.cy[i] #+ age.site.beta[ageclass[i]]*bs[i]
 }
 # 
 # #derived parameter
@@ -426,7 +426,7 @@ sink()
 jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rain.by = rain.by )#, age=age, rain.sim=rain.simrain.sim = rain.sim, age=age,
 
 #inits function
-inits<- function(){list(bs.beta = c(NA,rnorm(2,0,1)), rain.beta = rnorm(1,0,1), age.beta = c(NA,rnorm(11,0,1)), rain.by.beta = c(NA,rnorm(2,0,1)),
+inits<- function(){list(bs.beta = c(NA,rnorm(2,0,1)), rain.beta = rnorm(1,0,1), age.beta = c(NA,rnorm(11,0,1)), rain.by.beta = c(NA,rnorm(3,0,1)),
                                   interaction.beta = rnorm(9, 0, 1), age.site.beta = rnorm(12,0,1), sigma = rlnorm(1))}
 
 #log normal pulls just positive values

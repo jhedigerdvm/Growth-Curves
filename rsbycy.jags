@@ -18,7 +18,7 @@ for (u in 2:3){                         #birthsite
 
 rain.beta ~ dnorm(0,0.001)              #rain
 
-rain.by.beta[1] <- 0
+rain.by.beta[1]<-0
 for (u in 2:3){                         # birth year rain
   rain.by.beta ~ dnorm(0,0.001)
 }
@@ -26,12 +26,12 @@ for (u in 2:3){                         # birth year rain
 # for (u in 1:9){
 #   interaction.beta ~ dnorm(0, 0.001)
 # }
-
-for(i in 1:3){ #site
-  for(j in 1:3){  #birth rain
-    interaction.beta[i,j] ~ dnorm(0,0.001)
-  }
-}
+# 
+# for(i in 1:3){ #site
+#   for(j in 1:3){  #birth rain
+#     interaction.beta[i,j] ~ dnorm(0,0.001)
+#   }
+# }
 
 # for (u in 1:12){      #age site interaction
 #   age.site.beta ~ dnorm(0, 0.001)
@@ -40,8 +40,8 @@ for(i in 1:3){ #site
 # Likelihood 
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution, CHANGED TO LOG NORMAL, log link function
- mu[i] <- bs.beta[bs[i]] + age.beta[ageclass[i]] + rain.beta*rain.cy[i] + rain.by.beta[rain.by[i]] +
-                  interaction.beta[bs[i],rain.by[i]]*rain.cy[i] #+ age.site.beta[ageclass[i]]*bs[i]
+ mu[i] <- bs.beta[bs[i]] + age.beta[ageclass[i]] + rain.beta*rain.cy[i] + rain.by.beta[rain.by[i]] #+
+                  #interaction.beta[bs[i],rain.by[i]]*rain.cy[i] #+ age.site.beta[ageclass[i]]*bs[i]
 }
 # 
 # #derived parameter
