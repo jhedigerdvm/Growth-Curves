@@ -109,16 +109,16 @@ for (i in 1:n){
                                                       interaction.beta[bs[i],rain.by[i]]*rain[i]
 }
 
-# 
-# #derived parameter
-#   for (i in 1:3){ #birthsite
-#     for (j in 1:1000){ #rain sim
-#         for (k in age){ #ageclasses
-#       bcs[j,i,k] <- rain.beta*rain.sim[j] + bs.beta[i] + age.beta[k] + rain.bs.beta[i] * rain.sim[j]
-#     }
-#     }
-#   }
 
+#derived parameter
+  for (i in 1:3){ #birthsite, birth rain
+    for (j in 1:100){ #rain sim
+        for (k in age){ #ageclasses
+      bcs[j,i,i,k] <- rain.beta*rain.sim[j] + bs.beta[i] + rain.by.beta[i] + age.beta[k] + interaction.beta[i,i] * rain.sim[j]
+    }
+    }
+  }
+ 
 }
 ',fill = TRUE)
 sink()
@@ -149,75 +149,80 @@ print(ant.rain.jags)
 
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
         #then index in the order from output so above was bcs[j,i,k], can rename accordingly
-# gather<- ant.rain.jags %>% gather_draws(bcs[rain,site, age]) gather$site <- as.factor(gather$site)
-# gather$age <- as.factor(gather$age)
-# 
-# #find first row for 2nd rain value
-# first_idx <- which(gather$rain == 2)[1] # 27000 values of rain 1
-# 
-# # unscale and uncenter rain.sim
-# rain.sim1 <- (rain.sim * sd(data$annual)) + mean(data$annual)
-# 
-# #create vector containing simulated rainfall data but in the format to sync up with gather
-# vector1 <- numeric(0)
-# rain.sim3 <- for (i in rain.sim1) {
-#   rep_i <- rep(i, times = 27000)
-#   vector1 <- c(vector1,rep_i)
-#   
-# }
-# 
-# gather$rain1 <- vector1
-# 
-# 
-# #plot with age groups 1, 7, 10
-# plot<- gather %>%
-#   ggplot(aes(x=rain1, y=.value, color = site, fill = site)) +
-#   facet_wrap(vars(age), nrow = 1)+
-#   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
-#   scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
-#   scale_color_viridis_d()+ #color of line but no opacification
-#   labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain*site")+
-#   theme_bw() +
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-#         panel.border = element_blank(),
-#         axis.line = element_line(),
-#         legend.position = c(0.5,0.3),
-#         legend.title = element_blank(),
-#         legend.text = element_text(size = 28),
-#         plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
-#         axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
-#         axis.text = element_text(face='bold',size = 28),
-#         # axis.text.x = element_text(angle = 45, hjust = 1),
-#         panel.background = element_rect(fill='transparent'), #transparent panel bg
-#         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
-# 
-# ggsave('./figures/antler.facet.jpg', plot, width = 15, height = 10)
-# 
-# 
-# #plot with only age group 7
-# plot<- gather %>% filter(age == '7') %>% 
-#   ggplot(aes(x=rain1, y=.value, color = site, fill = site)) +
-#   facet_wrap(vars(age), nrow = 1)+
-#   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
-#   scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
-#   scale_color_viridis_d()+ #color of line but no opacification
-#   labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain*site")+
-#   theme_bw() +
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-#         panel.border = element_blank(),
-#         axis.line = element_line(),
-#         legend.position = c(0.1,0.9),
-#         legend.title = element_blank(),
-#         legend.text = element_text(size = 28),
-#         plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
-#         axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
-#         axis.text = element_text(face='bold',size = 28),
-#         # axis.text.x = element_text(angle = 45, hjust = 1),
-#         panel.background = element_rect(fill='transparent'), #transparent panel bg
-#         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
-# 
-# ggsave('./figures/antler.rain.7.jpg', plot, width = 15, height = 10)
-# 
+gather<- ant.rain.jags %>% gather_draws(bcs[rain,site,by.rain, age]) 
+gather$site <- as.factor(gather$site)
+gather$age <- as.factor(gather$age)
+
+#find first row for 2nd rain value
+first_idx <- which(gather$rain == 2)[1] # 27000 values of rain 1
+
+# unscale and uncenter rain.sim
+rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
+
+#create vector containing simulated rainfall data but in the format to sync up with gather
+vector1 <- numeric(0)
+rain.sim3 <- for (i in rain.sim1) {
+  rep_i <- rep(i, times = 27000)
+  vector1 <- c(vector1,rep_i)
+
+}
+
+gather$rain1 <- vector1
+
+#subset gather to only include dmp
+dmp <- gather %>% filter(site == '1')
+
+dmp$by.rain<-as.factor(dmp$by.rain)
+
+#plot with age groups 1, 7, 10
+plot.dmp<- dmp %>% filter(age == '7') %>% 
+  ggplot(aes(x=rain1, y=.value, color = by.rain, fill = by.rain)) +
+  #facet_wrap(vars(age), nrow = 1)+
+  stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
+  scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
+  scale_color_viridis_d()+ #color of line but no opacification
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain*site")+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(),
+        legend.position = c(0.5,0.3),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 28),
+        plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+        axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
+        axis.text = element_text(face='bold',size = 28),
+        # axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill='transparent'), #transparent panel bg
+        plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
+
+ggsave('./figures/antler.facet.jpg', plot, width = 15, height = 10)
+
+
+#plot with only age group 7
+plot<- gather %>% filter(age == '7') %>%
+  ggplot(aes(x=rain1, y=.value, color = site, fill = site)) +
+  facet_wrap(vars(age), nrow = 1)+
+  stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
+  scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
+  scale_color_viridis_d()+ #color of line but no opacification
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain*site")+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(),
+        legend.position = c(0.1,0.9),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 28),
+        plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+        axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
+        axis.text = element_text(face='bold',size = 28),
+        # axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.background = element_rect(fill='transparent'), #transparent panel bg
+        plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
+
+ggsave('./figures/antler.rain.7.jpg', plot, width = 15, height = 10)
+
 
 # 
 # #Write linear mixed effects model for antlers ~ age + site + rain + site*rain + site*age, lower WAIC than excluding site*age
