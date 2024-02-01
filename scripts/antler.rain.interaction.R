@@ -65,7 +65,7 @@ data$rain.by <- as.factor(ifelse(data$annual.by <= 18.3, 1,
                     ifelse(data$annual.by >18.3 & data$annual.by < 31.8, '2',
                         ifelse(data$annual.by>= 31.8, '3', NA))))
 
-rain.by<- as.integer(data$rain.by)
+rain.by<- as.numeric(as.factor(data$rain.by))
 
 # #cap year and birth year rain
 # rain.site.cy <- as.numeric(as.factor(data$rain.site.cy))
@@ -426,7 +426,7 @@ sink()
 jags.data <- list(n=n, bs=bs, antlers=antlerin, rain.cy = rain.cy, ageclass=ageclass, rain.by = rain.by )#, age=age, rain.sim=rain.simrain.sim = rain.sim, age=age,
 
 #inits function
-inits<- function(){list(bs.beta = c(NA,rnorm(2,0,1)), rain.beta = rnorm(1,0,1), age.beta = c(NA,rnorm(11,0,1)), rain.by.beta = c(NA,rnorm(3,0,1)),
+inits<- function(){list(bs.beta = c(NA,rnorm(2,0,1)), rain.beta = rnorm(1,0,1), age.beta = c(NA,rnorm(11,0,1)), rain.by.beta = c(NA,rnorm(2,0,1)),
                                   interaction.beta = rnorm(9, 0, 1), age.site.beta = rnorm(12,0,1), sigma = rlnorm(1))}
 
 #log normal pulls just positive values
