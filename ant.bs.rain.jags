@@ -35,13 +35,15 @@ for (i in 1:n){
 
 
 #derived parameter
-  for (i in 1:3){ #birthsite
-    for (j in 1:100){ #rain sim
-        for (k in age){ #ageclasses
-      bcs[j,i,i,k] <- rain.beta*rain.sim[j] + bs.beta[i] + rain.by.beta[i] + age.beta[k] + interaction.beta[i,i] * rain.sim[j]
+  for (i in 1:3){ #birthsite, birth rain
+    for (j in 1:3){ #birth rain
+      for (k in 1:100){ #rain sim
+        for (l in age){ #ageclasses
+      bcs[k,i,j,l] <- rain.beta*rain.sim[k] + bs.beta[i] + rain.by.beta[i] + age.beta[l] + interaction.beta[i,j] * rain.sim[k]
     }
     }
   }
- 
+  }
+  
 }
 

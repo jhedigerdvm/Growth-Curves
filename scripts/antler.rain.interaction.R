@@ -112,13 +112,15 @@ for (i in 1:n){
 
 #derived parameter
   for (i in 1:3){ #birthsite, birth rain
-    for (j in 1:100){ #rain sim
-        for (k in age){ #ageclasses
-      bcs[j,i,i,k] <- rain.beta*rain.sim[j] + bs.beta[i] + rain.by.beta[i] + age.beta[k] + interaction.beta[i,i] * rain.sim[j]
+    for (j in 1:3){ #birth rain
+      for (k in 1:100){ #rain sim
+        for (l in age){ #ageclasses
+      bcs[k,i,j,l] <- rain.beta*rain.sim[k] + bs.beta[i] + rain.by.beta[i] + age.beta[l] + interaction.beta[i,j] * rain.sim[k]
     }
     }
   }
- 
+  }
+  
 }
 ',fill = TRUE)
 sink()
@@ -152,6 +154,7 @@ print(ant.rain.jags)
 gather<- ant.rain.jags %>% gather_draws(bcs[rain,site,by.rain, age]) 
 gather$site <- as.factor(gather$site)
 gather$age <- as.factor(gather$age)
+gather$by.rain <- as.factor(gather$by.rain)
 
 #find first row for 2nd rain value
 first_idx <- which(gather$rain == 2)[1] # 27000 values of rain 1
@@ -162,7 +165,7 @@ rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
 #create vector containing simulated rainfall data but in the format to sync up with gather
 vector1 <- numeric(0)
 rain.sim3 <- for (i in rain.sim1) {
-  rep_i <- rep(i, times = 27000)
+  rep_i <- rep(i, times = 81000)
   vector1 <- c(vector1,rep_i)
 
 }
@@ -172,31 +175,29 @@ gather$rain1 <- vector1
 #subset gather to only include dmp
 dmp <- gather %>% filter(site == '1')
 
-dmp$by.rain<-as.factor(dmp$by.rain)
-
 #plot with age groups 1, 7, 10
-plot.dmp<- dmp %>% filter(age == '7') %>% 
+plot.wy<- gather %>% filter(site == '3' & age == '7') %>% 
   ggplot(aes(x=rain1, y=.value, color = by.rain, fill = by.rain)) +
   #facet_wrap(vars(age), nrow = 1)+
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
-  scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
-  scale_color_viridis_d()+ #color of line but no opacification
-  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain*site")+
+  scale_fill_viridis_d(alpha = .2, labels = c('Low', 'Intermediate', 'High')) + #this allowed me to opacify the ribbon but not the line
+  scale_color_viridis_d(labels = c('Low', 'Intermediate', 'High'))+ #color of line but no opacification
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "wy antlers ~ age + site + rain + by.rain + site*by.rain*rain")+
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.border = element_blank(),
         axis.line = element_line(),
-        legend.position = c(0.5,0.3),
+        legend.position = c(0.2,0.8),
         legend.title = element_blank(),
         legend.text = element_text(size = 28),
-        plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+        plot.title = element_text(face = 'bold', size = 21),
         axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
         axis.text = element_text(face='bold',size = 28),
         # axis.text.x = element_text(angle = 45, hjust = 1),
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/antler.facet.jpg', plot, width = 15, height = 10)
+ggsave('./figures/wy.antler.rain.jpg', plot.wy, width = 10, height = 8)
 
 
 #plot with only age group 7
