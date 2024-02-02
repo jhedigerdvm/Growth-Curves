@@ -6,11 +6,11 @@ library(here)
 
 
 #Load dataset with no fawns, just animals with antlers
-data <- read.csv('./raw/bucks_nofawns.csv', header=T)
+data <- read.csv('./raw/bucks_nofawns.csv', header=T)  #does not contain 2022 data
 head(data)
 
 #load rainfall data in inches, november to october periods
-rain <- read.csv("C:/Users/Joe/Documents/R Projects/Survival/cleaned/rainfall.csv", header = T)
+rain <- read.csv("C:/Users/Joe/Documents/3-R Projects/Survival/cleaned/rainfall.csv", header = T)
 
 merge <- merge(data, rain, by = c('year', 'birthsite'))
 data<- merge
@@ -52,5 +52,9 @@ data <- rename(data, 'annual.cy' = 'annual.capyear', 'annual.by'='annual.birthye
 
 write.csv(data, './clean/morpho_rain.csv', row.names = F)
 
-
-
+#######333
+data <- read.csv('./raw/master_data.csv', header = T)
+data1 <- data %>%  filter(Age != '0.5') #contains 2022 data
+data2 <- data1[,c(1:4, 8,9,15:19, 22,28:44)]
+data3 <- data2
+names(data3) <- c('animal_id', 'date', 'year_cap', 'year_birth', 'age', 'weight_lb', 'bs', 'points_typ' )
