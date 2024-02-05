@@ -57,4 +57,7 @@ data <- read.csv('./raw/master_data.csv', header = T)
 data1 <- data %>%  filter(Age != '0.5') #contains 2022 data
 data2 <- data1[,c(1:4, 8,9,15:19, 22,28:44)]
 data3 <- data2
-names(data3) <- c('animal_id', 'date', 'year_cap', 'year_birth', 'age', 'weight_lb', 'bs', 'points_typ' )
+names(data3) <- c('animal_id', 'date', 'year_cap', 'year_birth', 'age', 'weight_lb', 'bs', 'points_typ', 
+                  'points_total', 'mass', 'bcs_in', 'spike', 'gray_face', 'roman_nose', 'wrinkled_ears', 
+                  'loose_face', 'loose_neck', 'loose_chest', 'circ_face_eyes', 'circ_nosebridge', 'eyes_nose',
+                  )
