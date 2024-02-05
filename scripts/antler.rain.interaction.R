@@ -172,17 +172,14 @@ rain.sim3 <- for (i in rain.sim1) {
 
 gather$rain1 <- vector1
 
-#subset gather to only include dmp
-dmp <- gather %>% filter(site == '1')
-
 #plot with age groups 1, 7, 10
-plot.wy<- gather %>% filter(site == '3' & age == '7') %>% 
-  ggplot(aes(x=rain1, y=.value, color = by.rain, fill = by.rain)) +
+plot.high<- gather %>% filter(by.rain == '3' & age == '7') %>% 
+  ggplot(aes(x=rain1, y=.value, color = site, fill = site)) +
   #facet_wrap(vars(age), nrow = 1)+
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
-  scale_fill_viridis_d(alpha = .2, labels = c('Low', 'Intermediate', 'High')) + #this allowed me to opacify the ribbon but not the line
-  scale_color_viridis_d(labels = c('Low', 'Intermediate', 'High'))+ #color of line but no opacification
-  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "wy antlers ~ age + site + rain + by.rain + site*by.rain*rain")+
+  scale_fill_viridis_d(alpha = .2, labels = c('DMP', 'EY', 'WY')) + #this allowed me to opacify the ribbon but not the line
+  scale_color_viridis_d(labels = c('DMP', 'EY', 'WY'))+ #color of line but no opacification
+  labs(x = "RAINFALL", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + rain + by.rain + site*by.rain*rain")+
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.border = element_blank(),
@@ -197,7 +194,7 @@ plot.wy<- gather %>% filter(site == '3' & age == '7') %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/wy.antler.rain.jpg', plot.wy, width = 10, height = 8)
+ggsave('./figures/antler.rain.high.jpg', plot.high, width = 10, height = 8)
 
 
 #plot with only age group 7
