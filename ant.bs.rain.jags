@@ -2,9 +2,13 @@
 model{
 
 #priors
+# 
+# for(u in 1:12){ #ageclass
+#   age.beta[u] ~ dnorm(0,0.001)
+# }
 
-for(u in 1:12){ #ageclass
-  age.beta[u] ~ dnorm(0,0.001)
+for(u in 1:2){ #ageclass
+  age.beta[u] ~ dbinom(0,1)
 }
 
 sigma ~ dunif(0,10)

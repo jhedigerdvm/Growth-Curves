@@ -61,11 +61,22 @@ nvalues <- 100
 rain.sim <- seq(from = min(rain.cy, na.rm = T), to = max(rain.cy, na.rm = T), length.out = nvalues) #obtained to and from values from max and min of annual rainfall in data
 rain.sim
 
+#Create column with birth year rain being low medium and high with 1 2 3 demarkers
 data$rain.by <- as.factor(ifelse(data$annual.by <= 18.3, 1, 
                     ifelse(data$annual.by >18.3 & data$annual.by < 31.8, '2',
                         ifelse(data$annual.by>= 31.8, '3', NA))))
-
+#create categorical birthyear rain vector
 rain.by<- as.numeric(as.factor(data$rain.by))
+
+#create continuous birth year rain vector
+rain.by <- scale(data$annual.by)
+rain.by <- as.vector(rain.by)
+
+#make new ageclass vector to binary variable where immature = 1 and mature = 2, immature < 5 yo, mature >= 5 yo
+ageclass1 <- ifelse(ageclass <= 4, 1, 
+                ifelse(ageclass >4, 2, NA))
+
+unique(ageclass1)
 
 # #cap year and birth year rain
 # rain.site.cy <- as.numeric(as.factor(data$rain.site.cy))
@@ -78,10 +89,14 @@ cat('
 model{
 
 #priors
-
-for(u in 1:12){ #ageclass
-  age.beta[u] ~ dnorm(0,0.001)
-}
+# 
+# for(u in 1:12){ #ageclass
+#   age.beta[u] ~ dnorm(0,0.001)
+# }
+# 
+# for(u in 1:2){ #ageclass
+#   age.beta[u] ~ dbinom(0,1)
+# }
 
 sigma ~ dunif(0,10)
 tau <- 1/(sigma*sigma)
@@ -92,22 +107,27 @@ for (u in 1:3){ #birthsite
 
 rain.beta ~ dnorm(0,0.001) #rain
 
-for (u in 1:3){     #birth year rain
-  rain.by.beta[u] ~ dnorm(0,0.001)
-}
-  
+rain.by.beta ~ dnorm(0, 0.001) #birth year rain, continuous
+# 
+# for (u in 1:3){     #birth year rain
+#   rain.by.beta[u] ~ dnorm(0,0.001)
+# }
+#   
+# for (u in 1:3) { #site
+#   for (j in 1:3){ # birth year rain
+#     interaction.beta[u,j] ~ dnorm(0, 0.001)
+#   }
+# }
+
 for (u in 1:3) { #site
-  for (j in 1:3){ # birth year rain
-    interaction.beta[u,j] ~ dnorm(0, 0.001)
+  interaction.beta[u] ~ dnorm (0,0.001)
   }
-}
 
 # Likelihood
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + 
-                                                      interaction.beta[bs[i],rain.by[i]]*rain[i]
-}
+ mu[i] <- rain.beta*rain[i] + rain.by.beta*birth.rain[i] + bs.beta[bs[i]] + interaction.beta[bs[i]]*birth.rain[i]*rain[i]
+}                                     #rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + interaction.beta[bs[i],rain.by[i]]*rain[i]
 
 
 #derived parameter
@@ -126,12 +146,12 @@ for (i in 1:n){
 sink()
 
 #bundle data
-jags.data <- list(n=n, bs = bs, rain.by = rain.by, antlers = antlerin, rain = rain.cy, age=age, ageclass = ageclass, 
+jags.data <- list(n=n, bs = bs, rain.by = rain.by, antlers = antlerin, rain = rain.cy, age=age, ageclass = ageclass1, 
                   rain.sim = rain.sim)
 
 #inits function
 inits<- function(){list(bs.beta = rnorm(3, 0, 1),  rain.by.beta = rnorm(3,0,1),
-                        rain.beta = rnorm(1,0,1), sigma = rlnorm(1), age.beta = rnorm(12,0,1))}
+                        rain.beta = rnorm(1,0,1), sigma = rlnorm(1), age.beta = rbinom(2226,1,1))}
                          #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),
 
 #parameters to estimate
