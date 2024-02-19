@@ -57,9 +57,13 @@ rain.cy<- as.vector(rain.cy)
 
 age<- c(1,7,10)
 
+#create simulated rainfall data
 nvalues <- 100
 rain.sim <- seq(from = min(rain.cy, na.rm = T), to = max(rain.cy, na.rm = T), length.out = nvalues) #obtained to and from values from max and min of annual rainfall in data
 rain.sim
+
+rain.by.sim <-seq(from = min(rain.by, na.rm = T), to = max(rain.by, na.rm = T), length.out = nvalues) #obtained to and from values from max and min of annual rainfall in data
+rain.by.sim
 
 #Create column with birth year rain being low medium and high with 1 2 3 demarkers
 data$rain.by <- as.factor(ifelse(data$annual.by <= 18.3, 1, 
@@ -131,31 +135,31 @@ for (i in 1:n){
 
 
 #derived parameter
-  for (i in 1:3){ #birthsite, birth rain
-    for (j in 1:3){ #birth rain
-      for (k in 1:100){ #rain sim
-        for (l in age){ #ageclasses
-      bcs[k,i,j,l] <- rain.beta*rain.sim[k] + bs.beta[i] + rain.by.beta[i] + age.beta[l] + interaction.beta[i,j] * rain.sim[k]
-    }
-    }
+  for (i in 1:3){ #birthsite
+    for (j in 1:100){ #birth rain sim
+      for (k in 1:100){ #rain sim current year
+        # for (l in age){ #ageclasses
+      bcs[k,i,j] <- rain.beta*rain.sim[k] + rain.by.beta*rain.by.sim[j] + bs.beta[i] + interaction.beta[i] * rain.sim[k] * rain.by.sim[j]
+    
   }
   }
-  
+    }
+    
 }
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, bs = bs, rain.by = rain.by, antlers = antlerin, rain = rain.cy, age=age, ageclass = ageclass1, 
-                  rain.sim = rain.sim)
+jags.data <- list(n=n, bs = bs, birth.rain = rain.by, antlers = antlerin, rain = rain.cy, age=age, ageclass = ageclass1, 
+                  rain.sim = rain.sim, rain.by.sim = rain.by.sim)
 
 #inits function
-inits<- function(){list(bs.beta = rnorm(3, 0, 1),  rain.by.beta = rnorm(3,0,1),
-                        rain.beta = rnorm(1,0,1), sigma = rlnorm(1), age.beta = rbinom(2226,1,1))}
-                         #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),
+inits<- function(){list(bs.beta = rnorm(3, 0, 1),  rain.by.beta = rnorm(1,0,1),
+                        rain.beta = rnorm(1,0,1), sigma = rlnorm(1))}
+                         #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),age.beta = rbinom(2226,1,1
 
 #parameters to estimate
-parameters <- c('bs.beta', 'rain.beta', 'rain.by.beta', 'age.beta', 'interaction.beta', 'bcs')#
+parameters <- c('bs.beta', 'rain.beta', 'rain.by.beta', 'interaction.beta', 'bcs')#'age.beta', , 'bcs'
 
 #MCMC settings
 ni <- 2000
@@ -171,26 +175,40 @@ print(ant.rain.jags)
 
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
         #then index in the order from output so above was bcs[j,i,k], can rename accordingly
-gather<- ant.rain.jags %>% gather_draws(bcs[rain,site,by.rain, age]) 
+gather<- ant.rain.jags %>% gather_draws(bcs[rain,site,by.rain]) 
 gather$site <- as.factor(gather$site)
-gather$age <- as.factor(gather$age)
-gather$by.rain <- as.factor(gather$by.rain)
+# gather$age <- as.factor(gather$age)
+# gather$by.rain <- as.factor(gather$by.rain)
 
 #find first row for 2nd rain value
 first_idx <- which(gather$rain == 2)[1] # 27000 values of rain 1
 
 # unscale and uncenter rain.sim
 rain.sim1 <- (rain.sim * sd(data$annual.cy)) + mean(data$annual.cy)
+rain.by.sim1 <- (rain.by.sim * sd(data$annual.by)) + mean(data$annual.by)
 
 #create vector containing simulated rainfall data but in the format to sync up with gather
 vector1 <- numeric(0)
 rain.sim3 <- for (i in rain.sim1) {
-  rep_i <- rep(i, times = 81000)
+  rep_i <- rep(i, times = 900000)
   vector1 <- c(vector1,rep_i)
 
 }
 
-gather$rain1 <- vector1
+gather$rain.cy.sim <- vector1
+
+#find first row for 2nd birth rain value
+first_idx <- which(gather$by.rain == 2)[1] # 27000 values of rain 1
+
+#create vector containing simulated rainfall data  for birth year but in the format to sync up with gather
+vector1 <- numeric(0)
+rain.sim3 <- for (i in rain.by.sim1) {
+  rep_i <- rep(i, times = 3000, length.out = 90000000)
+  vector1 <- c(vector1,rep_i)
+  
+}
+
+gather$rain.by.sim <- vector1
 
 #plot with age groups 1, 7, 10
 plot.high<- gather %>% filter(by.rain == '3' & age == '7') %>% 
