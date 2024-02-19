@@ -6,10 +6,10 @@ model{
 # for(u in 1:12){ #ageclass
 #   age.beta[u] ~ dnorm(0,0.001)
 # }
-
-for(u in 1:2){ #ageclass
-  age.beta[u] ~ dbinom(0,1)
-}
+# 
+# for(u in 1:2){ #ageclass
+#   age.beta[u] ~ dbinom(0,1)
+# }
 
 sigma ~ dunif(0,10)
 tau <- 1/(sigma*sigma)
@@ -20,34 +20,39 @@ for (u in 1:3){ #birthsite
 
 rain.beta ~ dnorm(0,0.001) #rain
 
-for (u in 1:3){     #birth year rain
-  rain.by.beta[u] ~ dnorm(0,0.001)
-}
-  
+rain.by.beta ~ dnorm(0, 0.001) #birth year rain, continuous
+# 
+# for (u in 1:3){     #birth year rain
+#   rain.by.beta[u] ~ dnorm(0,0.001)
+# }
+#   
+# for (u in 1:3) { #site
+#   for (j in 1:3){ # birth year rain
+#     interaction.beta[u,j] ~ dnorm(0, 0.001)
+#   }
+# }
+
 for (u in 1:3) { #site
-  for (j in 1:3){ # birth year rain
-    interaction.beta[u,j] ~ dnorm(0, 0.001)
+  interaction.beta[u] ~ dnorm (0,0.001)
   }
-}
 
 # Likelihood
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- rain.beta*rain[i] + bs.beta[bs[i]] + rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + 
-                                                      interaction.beta[bs[i],rain.by[i]]*rain[i]
-}
+ mu[i] <- rain.beta*rain[i] + rain.by.beta*birth.rain[i] + bs.beta[bs[i]] + interaction.beta[bs[i]]*birth.rain[i]*rain[i]
+}                                     #rain.by.beta[rain.by[i]] + age.beta[ageclass[i]] + interaction.beta[bs[i],rain.by[i]]*rain[i]
 
 
 #derived parameter
-  for (i in 1:3){ #birthsite, birth rain
-    for (j in 1:3){ #birth rain
-      for (k in 1:100){ #rain sim
-        for (l in age){ #ageclasses
-      bcs[k,i,j,l] <- rain.beta*rain.sim[k] + bs.beta[i] + rain.by.beta[i] + age.beta[l] + interaction.beta[i,j] * rain.sim[k]
-    }
-    }
+  for (i in 1:3){ #birthsite
+    for (j in 1:100){ #birth rain sim
+      for (k in 1:100){ #rain sim current year
+        # for (l in age){ #ageclasses
+      bcs[k,i,j] <- rain.beta*rain.sim[k] + rain.by.beta*rain.by.sim[j] + bs.beta[i] + interaction.beta[i] * rain.sim[k] * rain.by.sim[j]
+    
   }
   }
-  
+    }
+    
 }
 
