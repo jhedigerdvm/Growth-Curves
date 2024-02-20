@@ -69,15 +69,34 @@ for (u in 1:3){ #birthsite
 for (u in 1:12) { #site and age interaction
   age.bs.beta[u] ~ dnorm(0, 0.001)
 }
+# 
+# for (u in 1:14) { #birth year effect
+#   birthyear.beta[u] ~ dnorm(0,0.001)
+# }
 
 tau <- 1/(sigma*sigma)
 sigma ~ dunif(0,100)
 
 
+for (u in 1:14) {   #random effect for capture year
+  eps.capyear[u] ~ dnorm(0, sigma)
+  }
+
+for (u in 1:475){ #random effect for animal id
+  eps.id[u] ~ dnorm(0,sigma)
+}
+
+for (u in 1:14) { #random effect for birth year
+  eps.birthyear[u] ~ dnorm(0, sigma)
+}
+
 # Likelihood 
 for (i in 1:n){
  antler[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- ageclass.beta[ageclass[i]] + bs.beta[bs[i]] + age.bs.beta[ageclass[i]] * bs[i]
+ mu[i] <- ageclass.beta[ageclass[i]] + bs.beta[bs[i]] + age.bs.beta[ageclass[i]] * bs[i] + 
+                                                        eps.capyear[capyear[i]] + 
+                                                        eps.id[animal_id[i]] +
+                                                        eps.birthyear[birthyear[i]]
 }
 
 #derived parameter
@@ -88,21 +107,23 @@ for (i in 1:n){
   }
 
 
-
-for (i in 1:3){
-  for (j in 1:10){ #age
-    antlers_diff[i,j] <- antlers[1,j] - antlers[i,j]
-  }
-  }
+# 
+# for (i in 1:3){
+#   for (j in 1:10){ #age
+#     antlers_diff[i,j] <- antlers[1,j] - antlers[i,j]
+#   }
+#   }
 }   
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, ageclass = ageclass, bs = bs, antler = antlerin)
+jags.data <- list(n=n, ageclass = ageclass, bs = bs, antler = antlerin, capyear = capyear, 
+                  animal_id=animal_id, birthyear = birthyear)
 
 #inits function
 inits<- function(){list(ageclass.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1), age.bs.beta = rnorm(12, 0, 1),
+                        eps.birthyear = rnorm(14, 0,1),eps.capyear = rnorm(14, 0,1), eps.id = rnorm(475,0,1),
                         sigma = rlnorm(1))} #log normal pulls just positive values,
 
 #parameters to estimate
@@ -118,7 +139,7 @@ lme.jags<- jagsUI(jags.data, inits, parameters, 'ant.bs.age.jags', n.thin = nt, 
                   n.burnin = nb, n.iter = ni)
 print(lme.jags)
 MCMCtrace(lme.jags)
-write.csv(lme.jags$summary, 'antlers.bs.age.intrxn.csv')
+# write.csv(lme.jags$summary, 'antlers.bs.age.intrxn.csv')
 
 
 #create a tibble of the posterior draws
@@ -126,39 +147,42 @@ gather<- lme.jags %>% gather_draws(antlers[site, age]) #this creates a dataframe
 gather$site <- as.factor(gather$site)
 gather$age <- as.factor(gather$age)
 
-#find first row for 2nd rain value
-first_idx <- which(gather1$rain == 2)[1] # 4500 values of rain 1 
 
 #plot 
-plot<- gather %>% 
-  ggplot(aes(x=age, y=.value, color = site, fill = site)) +
-  stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI 
-  scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
-  scale_color_viridis_d()+ #color of line but no opacification
-  labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + age*site")+
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.border = element_blank(),
-        axis.line = element_line(),
-        legend.position = c(0.5,0.3),
-        legend.title = element_blank(),
-        legend.text = element_text(size = 28),
-        plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
-        axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
-        axis.text = element_text(face='bold',size = 28),
-        # axis.text.x = element_text(angle = 45, hjust = 1),
-        panel.background = element_rect(fill='transparent'), #transparent panel bg
-        plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
-
-ggsave('./figures/antler.smooth.jpg', plot, width = 15, height = 10)
+# plot<- gather %>% 
+#   ggplot(aes(x=age, y=.value, color = site, fill = site)) +
+#   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI 
+#   scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
+#   scale_color_viridis_d()+ #color of line but no opacification
+#   labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "ANTLER SCORE BY AGE AND SITE")+
+#   theme_bw() +
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         axis.line = element_line(),
+#         legend.position = c(0.5,0.3),
+#         legend.title = element_blank(),
+#         legend.text = element_text(size = 28),
+#         plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+#         axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
+#         axis.text = element_text(face='bold',size = 28),
+#         # axis.text.x = element_text(angle = 45, hjust = 1),
+#         panel.background = element_rect(fill='transparent'), #transparent panel bg
+#         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
+# 
+# ggsave('./figures/antler.smooth.jpg', plot, width = 10, height = 8)
 
 plot2<- gather %>% 
   ggplot(aes(x=age, y=.value, color = site, fill = site)) +
   stat_pointinterval(alpha = .5, .width = c(0.5, 0.95), 
                      position = position_dodge(width = 0.5)) +
-  scale_fill_viridis_d(begin = 0, end = 0.6, option = 'F', alpha = .2) + #this allowed me to opacify the ribbon but not the line
-  scale_color_viridis_d(option = 'F', begin = 0, end = 0.6)+ #color of line but no opacification
-  labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site + age*site")+
+  scale_fill_discrete(name = "BIRTH SITE", labels = c("DMP", "CONTROL", "TGT")) +
+  scale_color_discrete(name = "BIRTH SITE", labels = c("DMP", "CONTROL", "TGT")) +
+  
+  # scale_fill_viridis_d(begin = 0, end = 0.6, option = 'F', alpha = .2, 
+  #                      labels = "DMP", "CONTROL", "TGT") + #this allowed me to opacify the ribbon but not the line
+  # scale_color_viridis_d(option = 'F', begin = 0, end = 0.6,
+  #                       labels = "DMP", "CONTROL", "TGT")+ #color of line but no opacification
+  labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "ANTLERS BY AGE AND SITE")+
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.border = element_blank(),
@@ -173,16 +197,17 @@ plot2<- gather %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 plot2
-ggsave('./figures/antler.point.jpg', plot2, width = 15, height = 10)
+ggsave('./figures/antlers.jpg', plot2, width = 8, height = 6)
 
 
 
-#antlers by site and age but NO interaction
+
+#Model predicting bodyweight in pounds as a function of site, age, and the interaction bt site and age
 set.seed(100)
-sink('ant.bs.age.jags')
+sink('weight.jags')
 cat('
 model{
-
+  
 #priors
 
 for(u in 1:12){ #ageclass
@@ -193,47 +218,68 @@ for (u in 1:3){ #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
 }
 
-# for (u in 1:12) { #site and age interaction
-#   age.bs.beta[u] ~ dnorm(0, 0.001)
+for (u in 1:12) { #site and age interaction
+  age.bs.beta[u] ~ dnorm(0, 0.001)
+}
+# 
+# for (u in 1:14) { #birth year effect
+#   birthyear.beta[u] ~ dnorm(0,0.001)
 # }
 
 tau <- 1/(sigma*sigma)
 sigma ~ dunif(0,100)
 
 
-# Likelihood
+for (u in 1:14) {   #random effect for capture year
+  eps.capyear[u] ~ dnorm(0, sigma)
+  }
+
+for (u in 1:475){ #random effect for animal id
+  eps.id[u] ~ dnorm(0,sigma)
+}
+
+for (u in 1:14) { #random effect for birth year
+  eps.birthyear[u] ~ dnorm(0, sigma)
+}
+
+# Likelihood 
 for (i in 1:n){
- antler[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- ageclass.beta[ageclass[i]] + bs.beta[bs[i]] #+ age.bs.beta[ageclass[i]] * bs[i]
+ weight[i] ~ dnorm(mu[i], tau) #each weight is a draw from this distribution
+ mu[i] <- ageclass.beta[ageclass[i]] + bs.beta[bs[i]] + age.bs.beta[ageclass[i]] * bs[i] + 
+                                                        eps.capyear[capyear[i]] + 
+                                                        eps.id[animal_id[i]] +
+                                                        eps.birthyear[birthyear[i]]
 }
 
 #derived parameter
   for (i in 1:3){ #birthsite
     for (j in 1:10) { #ageclass
-      antlers[i,j] <- ageclass.beta[j] + bs.beta[i] # + age.bs.beta[j]*i
+      bodymass[i,j] <- ageclass.beta[j] + bs.beta[i] + age.bs.beta[j]*i
     }
   }
 
 
-
-for (i in 1:3){
-  for (j in 1:10){ #age
-    antlers_diff[i,j] <- antlers[1,j] - antlers[i,j]
-  }
-  }
-}
+# 
+# for (i in 1:3){
+#   for (j in 1:10){ #age
+#     antlers_diff[i,j] <- antlers[1,j] - antlers[i,j]
+#   }
+#   }
+}   
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, ageclass = ageclass, bs = bs, antler = antlerin)
+jags.data <- list(n=n, ageclass = ageclass, bs = bs, weight = weightlb, capyear = capyear, 
+                  animal_id=animal_id, birthyear = birthyear)
 
 #inits function
-inits<- function(){list(ageclass.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1),
-                        sigma = rlnorm(1))} #log normal pulls just positive values,age.bs.beta = rnorm(12, 0, 1),
+inits<- function(){list(ageclass.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1), age.bs.beta = rnorm(12, 0, 1),
+                        eps.birthyear = rnorm(14, 0,1),eps.capyear = rnorm(14, 0,1), eps.id = rnorm(475,0,1),
+                        sigma = rlnorm(1))} #log normal pulls just positive values,
 
 #parameters to estimate
-parameters <- c('ageclass.beta','bs.beta', 'antlers', 'antlers_diff')#'age.bs.beta',
+parameters <- c('ageclass.beta','bs.beta', 'age.bs.beta', 'bodymass')#
 
 #MCMC settings
 ni <- 2000
@@ -241,49 +287,31 @@ nb <- 1000
 nt<- 1
 nc <- 3
 
-antlers.bs.age<- jagsUI(jags.data, inits, parameters, 'ant.bs.age.jags', n.thin = nt, n.chains = nc,
+weight.jags<- jagsUI(jags.data, inits, parameters, 'weight.jags', n.thin = nt, n.chains = nc, 
                   n.burnin = nb, n.iter = ni)
-print(antlers.bs.age)
-MCMCtrace(antlers.bs.age)
-write.csv(antlers.bs.age$summary, 'antlers.bs.age.csv')
+print(weight.jags)
+# MCMCtrace(lme.jags)
+# write.csv(lme.jags$summary, 'antlers.bs.age.intrxn.csv')
 
 
 #create a tibble of the posterior draws
-gather1<- antlers.bs.age %>% gather_draws(antlers[site, age]) #this creates a dataframe in long format with indexing
-gather1$site <- as.factor(gather1$site)
-gather1$age <- as.factor(gather1$age)
+gather<- weight.jags %>% gather_draws(bodymass[site, age]) #this creates a dataframe in long format with indexing
+gather$site <- as.factor(gather$site)
+gather$age <- as.factor(gather$age)
 
 
-#plot
-plot3<- gather1 %>%
+plot2<- gather %>% 
   ggplot(aes(x=age, y=.value, color = site, fill = site)) +
-  stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
-  scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
-  scale_color_viridis_d()+ #color of line but no opacification
-  labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site")+
-  theme_bw() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.border = element_blank(),
-        axis.line = element_line(),
-        legend.position = c(0.5,0.3),
-        legend.title = element_blank(),
-        legend.text = element_text(size = 28),
-        plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
-        axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
-        axis.text = element_text(face='bold',size = 28),
-        # axis.text.x = element_text(angle = 45, hjust = 1),
-        panel.background = element_rect(fill='transparent'), #transparent panel bg
-        plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
-
-ggsave('./figures/antler.smooth2.jpg', plot3, width = 15, height = 10)
-
-plot4<- gather1 %>%
-  ggplot(aes(x=age, y=.value, color = site, fill = site)) +
-  stat_pointinterval(alpha = .5, .width = c(0.5, 0.95),
+  stat_pointinterval(alpha = .5, .width = c(0.5, 0.95), 
                      position = position_dodge(width = 0.5)) +
-  scale_fill_viridis_d(begin = 0, end = 0.6, option = 'F', alpha = .2) + #this allowed me to opacify the ribbon but not the line
-  scale_color_viridis_d(option = 'F', begin = 0, end = 0.6)+ #color of line but no opacification
-  labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site")+
+  scale_fill_discrete(name = "BIRTH SITE", labels = c("DMP", "CONTROL", "TGT")) +
+  scale_color_discrete(name = "BIRTH SITE", labels = c("DMP", "CONTROL", "TGT")) +
+  
+  # scale_fill_viridis_d(begin = 0, end = 0.6, option = 'F', alpha = .2, 
+  #                      labels = "DMP", "CONTROL", "TGT") + #this allowed me to opacify the ribbon but not the line
+  # scale_color_viridis_d(option = 'F', begin = 0, end = 0.6,
+  #                       labels = "DMP", "CONTROL", "TGT")+ #color of line but no opacification
+  labs(x = "AGECLASS", y = "WEIGHT (LBS)", title = "WEIGHT BY AGE AND SITE")+
   theme_bw() +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.border = element_blank(),
@@ -297,5 +325,132 @@ plot4<- gather1 %>%
         # axis.text.x = element_text(angle = 45, hjust = 1),
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
-plot4
-ggsave('./figures/antler.point2.jpg', plot4, width = 15, height = 10)
+plot2
+ggsave('./figures/weight.jpg', plot2, width = 8, height = 6)
+
+
+
+# 
+# 
+# #antlers by site and age but NO interaction
+# set.seed(100)
+# sink('ant.bs.age.jags')
+# cat('
+# model{
+# 
+# #priors
+# 
+# for(u in 1:12){ #ageclass
+#   ageclass.beta[u] ~ dnorm(0,0.001)
+# }
+# 
+# for (u in 1:3){ #birthsite
+#   bs.beta[u] ~ dnorm(0,0.001)
+# }
+# 
+# # for (u in 1:12) { #site and age interaction
+# #   age.bs.beta[u] ~ dnorm(0, 0.001)
+# # }
+# 
+# tau <- 1/(sigma*sigma)
+# sigma ~ dunif(0,100)
+# 
+# 
+# # Likelihood
+# for (i in 1:n){
+#  antler[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
+#  mu[i] <- ageclass.beta[ageclass[i]] + bs.beta[bs[i]] #+ age.bs.beta[ageclass[i]] * bs[i]
+# }
+# 
+# #derived parameter
+#   for (i in 1:3){ #birthsite
+#     for (j in 1:10) { #ageclass
+#       antlers[i,j] <- ageclass.beta[j] + bs.beta[i] # + age.bs.beta[j]*i
+#     }
+#   }
+# 
+# 
+# 
+# for (i in 1:3){
+#   for (j in 1:10){ #age
+#     antlers_diff[i,j] <- antlers[1,j] - antlers[i,j]
+#   }
+#   }
+# }
+# ',fill = TRUE)
+# sink()
+# 
+# #bundle data
+# jags.data <- list(n=n, ageclass = ageclass, bs = bs, antler = antlerin)
+# 
+# #inits function
+# inits<- function(){list(ageclass.beta = rnorm(12,0,1), bs.beta = rnorm(3, 0, 1),
+#                         sigma = rlnorm(1))} #log normal pulls just positive values,age.bs.beta = rnorm(12, 0, 1),
+# 
+# #parameters to estimate
+# parameters <- c('ageclass.beta','bs.beta', 'antlers', 'antlers_diff')#'age.bs.beta',
+# 
+# #MCMC settings
+# ni <- 2000
+# nb <- 1000
+# nt<- 1
+# nc <- 3
+# 
+# antlers.bs.age<- jagsUI(jags.data, inits, parameters, 'ant.bs.age.jags', n.thin = nt, n.chains = nc,
+#                   n.burnin = nb, n.iter = ni)
+# print(antlers.bs.age)
+# MCMCtrace(antlers.bs.age)
+# write.csv(antlers.bs.age$summary, 'antlers.bs.age.csv')
+# 
+# 
+# #create a tibble of the posterior draws
+# gather1<- antlers.bs.age %>% gather_draws(antlers[site, age]) #this creates a dataframe in long format with indexing
+# gather1$site <- as.factor(gather1$site)
+# gather1$age <- as.factor(gather1$age)
+# 
+# 
+# #plot
+# plot3<- gather1 %>%
+#   ggplot(aes(x=age, y=.value, color = site, fill = site)) +
+#   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
+#   scale_fill_viridis_d(alpha = .2) + #this allowed me to opacify the ribbon but not the line
+#   scale_color_viridis_d()+ #color of line but no opacification
+#   labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site")+
+#   theme_bw() +
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         axis.line = element_line(),
+#         legend.position = c(0.5,0.3),
+#         legend.title = element_blank(),
+#         legend.text = element_text(size = 28),
+#         plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+#         axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
+#         axis.text = element_text(face='bold',size = 28),
+#         # axis.text.x = element_text(angle = 45, hjust = 1),
+#         panel.background = element_rect(fill='transparent'), #transparent panel bg
+#         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
+# 
+# ggsave('./figures/antler.smooth2.jpg', plot3, width = 15, height = 10)
+# 
+# plot4<- gather1 %>%
+#   ggplot(aes(x=age, y=.value, color = site, fill = site)) +
+#   stat_pointinterval(alpha = .5, .width = c(0.5, 0.95),
+#                      position = position_dodge(width = 0.5)) +
+#   scale_fill_viridis_d(begin = 0, end = 0.6, option = 'F', alpha = .2) + #this allowed me to opacify the ribbon but not the line
+#   scale_color_viridis_d(option = 'F', begin = 0, end = 0.6)+ #color of line but no opacification
+#   labs(x = "AGECLASS", y = "ANTLER SCORE (IN)", title = "antlers ~ age + site")+
+#   theme_bw() +
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         axis.line = element_line(),
+#         legend.position = c(0.5,0.3),
+#         legend.title = element_blank(),
+#         legend.text = element_text(size = 28),
+#         plot.title = element_text(face = 'bold', size = 32, hjust = 0.5),
+#         axis.title = element_text(face = 'bold',size = 32, hjust = 0.5),
+#         axis.text = element_text(face='bold',size = 28),
+#         # axis.text.x = element_text(angle = 45, hjust = 1),
+#         panel.background = element_rect(fill='transparent'), #transparent panel bg
+#         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
+# plot4
+# ggsave('./figures/antler.point2.jpg', plot4, width = 15, height = 10)
