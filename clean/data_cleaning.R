@@ -68,3 +68,33 @@ for (i in nrow:data3){
   
   
 }
+
+
+
+#update with 2022 individuals
+master <- read.csv("./raw/master_data_2022.csv", header = T)
+
+master22<- master %>%  filter(Capture.Year== "2022")
+master22<- master22[,c(1,3,4,8, 9,19)]
+names(master22)<- c('animal_id', 'year_cap','year_birth', 'age', 'weight','bcsin')
+
+
+#add birth site
+
+for (i in 1:nrow(master22)) {
+  x <- substr(master22$animal_id[i], 1, 1)
+  if (x == "2") {master22$birthsite[i] <- "wy"} else 
+  { master22$birthsite[i] <- "ey"}
+}
+##make a new column with discernment of DMP and pasture born
+for (i in 1:nrow(master22)) {
+  x <- substr(master22$animal_id[i], 10, 10)
+  if (x == "1") {master22$birthsite[i] <- "dmp"}
+}
+
+master22<- master22[master22$age != '0.5',]
+
+
+merge<- rbind(master22, data)
+
+write.csv(merge, './clean/nofawns22.csv', row.names = F)

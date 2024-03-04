@@ -80,11 +80,13 @@ ggsave('doe_weights.png', doe.plot, bg='transparent', width = 20, height = 10)
 
 #weight of sires in DMP and how those weights compare with other pastures
 sires<- read.csv('./raw/DMP_sire_data.csv', header = T, na.strings = c('','NA'))
-sires<- sires %>%  drop_na(weight,bcs,age) %>% filter(sex=='M')
+sires<- sires %>%  drop_na(weight,bcs,age)
 sires<- sires[,-c(4,7)]
 write.csv(sires,'./clean/sires.csv')
-sires$bcs<-as.numeric(sires$bcs)
-sires$weight<-as.numeric(sires$weight)
+sires<- read.csv('./clean/sires.csv', header = T)
+sires<- sires %>%  drop_na(weight)
+# sires$bcs<-as.numeric(sires$bcs)
+# sires$weight<-as.numeric(sires$weight)
 sire.weight<- sires %>%  group_by(age) %>% summarise(min = min(weight),
                                                     max = max(weight),
                                                     mean = mean(weight),

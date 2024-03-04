@@ -23,15 +23,15 @@ tau <- 1/(sigma*sigma)
 sigma ~ dunif(0,100)
 
 
-for (u in 1:14) {   #random effect for capture year
+for (u in 1:15) {   #random effect for capture year
   eps.capyear[u] ~ dnorm(0, sigma)
   }
 
-for (u in 1:475){ #random effect for animal id
+for (u in 1:494){ #random effect for animal id
   eps.id[u] ~ dnorm(0,sigma)
 }
 
-for (u in 1:14) { #random effect for birth year
+for (u in 1:15) { #random effect for birth year
   eps.birthyear[u] ~ dnorm(0, sigma)
 }
 
