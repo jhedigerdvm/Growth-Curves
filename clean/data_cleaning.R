@@ -98,3 +98,34 @@ master22<- master22[master22$age != '0.5',]
 merge<- rbind(master22, data)
 
 write.csv(merge, './clean/nofawns22.csv', row.names = F)
+
+data <- read.csv('./clean/nofawns22.csv', header = T)
+rain <- read.csv('./clean/rainfall_2022.csv', header = T)
+
+#now how to create a column with birthyear rain and site, .x is capyear rain, .y is birthyear rain
+merge <- merge(data, rain, by.x = c('birthsite','year_birth'), by.y = c('birthsite','year'))
+merge <- rename(merge, 'annual.by'='annual')
+merge <- merge[,-c(8:11)]
+
+#add a column for capture year rain
+merge1<- merge(merge, rain, by.x=c('birthsite','year_cap'), by.y=c('birthsite', 'year'))
+merge1 <- rename(merge1, 'annual.cy'= 'annual')
+merge1 <- merge1[,-c(9:12)] #remove rainvalues other than annual
+
+#rename columns
+merge1<- rename(merge1, 'weight.lb'='weight')
+merge1<- rename(merge1, 'antler.in'='bcsin')
+
+#create columns for metric system
+merge1$antler.cm <- merge1$antler.in*2.54
+merge1$weight.kg <- merge1$weight.lb/2.2
+
+#reorder dataframe columns
+merge1<- merge1[,c(4,1,3,2,5,6,11,7,10,8,9)]
+
+#round values to two decimals
+merge1$weight.kg <- round(merge1$weight.kg, digits = 2)
+merge1$antler.cm <- round(merge1$antler.cm, digits = 2)
+
+#save updated file with 2007 to 2022 buck data and rainfall, no fawns
+write.csv(merge1, './clean/nofawns22rain.csv', row.names = F)
