@@ -9,7 +9,7 @@ library(here)
 
 #Load dataset with no fawns, just animals with antlers
 # data <- read.csv('./raw/bucks_nofawns.csv', header=T)
-data<- read.csv('./clean/nofawns22.csv', header=T)
+data<- read.csv('./clean/nofawns22rain.csv', header=T)
 head(data)
 
 #replace zeros with NA
