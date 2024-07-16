@@ -20,6 +20,10 @@ for (u in 1:494){ #random effect for animal-id
   eps.id[u] ~ dnorm(0, sigma)
 }
 
+# for (u in 1:3 ){ #birth year rain and site intrx
+#   rain.bs.beta[u] ~ dnorm ( 0 , 0.01 )
+# }
+
 #hyperparameters
 sigma ~ dunif(0,10)
 tau <- 1/(sigma*sigma)
@@ -31,6 +35,7 @@ for (i in 1:n){
                                 + rain.by.beta*annualby[i]
                                 + eps.capyear[capyear[i]]
                                 + eps.id[animal_id[i]]
+                               # +rain.bs.beta[bs[i]]*annualby[i]
 
  }
 
@@ -38,6 +43,7 @@ for (i in 1:n){
   for (i in 1:3){ #birthsite
     for (j in 1:100){ #birth rain sim
       bcs[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j] 
+                             # + rain.bs.beta[i]*annual.by.sim[j]
 }
   }
 

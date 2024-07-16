@@ -18,26 +18,19 @@ data[data==0] <- NA
 
 #create a vector with 1 for treatment, 2 for control, 3 for tgt
 bs<- as.numeric(factor(data$birthsite))
-unique(data$birthsite)
-unique(bs) 
-bs  #dmp is 1, e yana 2, w yana 3
 
 #create vectors of things of interest
-class(data$year_cap)
 data$age <- data$year_cap - data$year_birth 
 ageclass <- data$age
-ageclass1 <- scale(ageclass)
-ageclass <- as.vector(ageclass1)
+ageclass <- as.vector(scale(ageclass)) #scale and center ageclass to treat as continuous cov.
 
 #create a vector for capture year, to fit random effect later
 capyear <- data$year_cap-min(data$year_cap)+1
-unique(capyear)
 
 #create vector for birthyear, so I can fit a random effect later
 birthyear<-data$year_birth-min(data$year_birth)+1
-unique(birthyear)
 
-#create vector with animal_id for the 475 unique individuals
+#create vector with animal_id for the 494 unique individuals
 animal_id <- as.numeric(factor(data$animal_id))
 length(unique(animal_id))
 
@@ -54,17 +47,17 @@ n <- nrow(data)
 
 #rainfall data
 data$annual.cy.sc <- scale(data$annual.cy)
-annualcy <- as.vector(data$annual.cy.sc)
+annualcy <- as.vector(data$annual.cy.sc)  #total annual rainfall for year of capture
 data$annual.by.sc <- scale(data$annual.by)
-annualby<-as.vector(data$annual.by.sc)
+annualby<-as.vector(data$annual.by.sc)  #total annual rainfall for birthyear of individual
 
 #create simulated rainfall data
 nvalues <- 100
 annual.cy.sim <- seq(from = min(annualcy, na.rm = T), to = max(annualcy, na.rm = T), length.out = nvalues) #obtained to and from values from max and min of annual rainfall in data
-annual.cy.sim
+annual.cy.sim #capture year rainfall sim
 
 annual.by.sim <-seq(from = min(annualby, na.rm = T), to = max(annualby, na.rm = T), length.out = nvalues) #obtained to and from values from max and min of annual rainfall in data
-annual.by.sim
+annual.by.sim #birth year rainfall sim
 
 
 #top performing model from survival data
@@ -77,10 +70,6 @@ model{
 #priors
 
 age.beta ~ dunif( 0 , 10 )
-
-# for(u in 1:12){ #ageclass
-#   age.beta[u] ~ dnorm(0,0.001)
-# }
 
 for (u in 1:3){ #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
@@ -95,7 +84,7 @@ for (u in 1:15){ #random effect for capture year
 for (u in 1:494){ #random effect for animal-id
   eps.id[u] ~ dnorm(0, sigma)
 }
-
+# 
 # for (u in 1:3){ #rain birthsite interaction
 #   rain.bs.beta[u] ~ dnorm( 0 , 0.001 )
 # }
@@ -111,7 +100,7 @@ for (i in 1:n){
                                 + rain.by.beta*annualby[i] 
                                 + eps.capyear[capyear[i]]
                                 + eps.id[animal_id[i]]
-                                #+ rain.bs.beta[bs[i]]*annualby[i]
+                                # + rain.bs.beta[bs[i]]*annualby[i]
  
  }                                   
 
@@ -119,17 +108,15 @@ for (i in 1:n){
   for (i in 1:3){ #birthsite
     for (j in 1:100){ #birth rain sim
       bodymass[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j] 
-                                    # + age.beta[k]
-                                    #+ rain.bs.beta[i]*annual.by.sim[j]
+                                    # + rain.bs.beta[i]*annual.by.sim[j]
 
       }
     }
   
-  # 
-  #   
-  # for (i in 1:3){ #birthsite
-  #   site_diff[i] <- bs.beta[i] - bs.beta[1]
-  # }
+
+  for (i in 1:3){ #birthsite
+    site_diff[i] <- bs.beta[i] - bs.beta[1]
+  }
   
 
 }
@@ -150,7 +137,7 @@ inits<- function(){list(bs.beta = rnorm(3, 0, 1), age.beta = runif(1,0,10), rain
 #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),age.beta = rbinom(2226,1,1
 
 #parameters to estimate
-parameters <- c('bs.beta', 'rain.by.beta', 'age.beta', 'bodymass')  #, 'rain.bs.beta'
+parameters <- c('bs.beta', 'rain.by.beta', 'age.beta',  'bodymass')  #, 'rain.bs.beta'
 
 #MCMC settings
 ni <- 1000
@@ -161,7 +148,7 @@ nc <- 3
 weight.jags<- jagsUI(jags.data, inits, parameters, 'weight.jags', n.thin = nt, n.chains = nc,
                        n.burnin = nb, n.iter = ni)
 print(weight.jags)
-write.csv(weight.jags$summary, './output/weight.csv')
+write.csv(weight.jags$summary, './/output/weight.rain.site.csv')
 
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output,
 #then index in the order from output so above was bcs[j,i,k], can rename accordingly
@@ -213,7 +200,7 @@ plot<- gather  %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('.//figures/weight.jpg', plot, width = 10, height = 8)
+ggsave('.//figures/weight.rain.site.intrx.jpg', plot, width = 10, height = 8)
 # # 
 # ########################################################################################
 #top performing model from survival data
@@ -242,6 +229,10 @@ for (u in 1:494){ #random effect for animal-id
   eps.id[u] ~ dnorm(0, sigma)
 }
 
+# for (u in 1:3 ){ #birth year rain and site intrx
+#   rain.bs.beta[u] ~ dnorm ( 0 , 0.01 )
+# }
+
 #hyperparameters
 sigma ~ dunif(0,10)
 tau <- 1/(sigma*sigma)
@@ -253,6 +244,7 @@ for (i in 1:n){
                                 + rain.by.beta*annualby[i]
                                 + eps.capyear[capyear[i]]
                                 + eps.id[animal_id[i]]
+                               # +rain.bs.beta[bs[i]]*annualby[i]
 
  }
 
@@ -260,6 +252,7 @@ for (i in 1:n){
   for (i in 1:3){ #birthsite
     for (j in 1:100){ #birth rain sim
       bcs[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j] 
+                             # + rain.bs.beta[i]*annual.by.sim[j]
 }
   }
 
@@ -298,7 +291,7 @@ nc <- 3
 antlers.jags<- jagsUI(jags.data, inits, parameters, 'antlers.jags', n.thin = nt, n.chains = nc,
                      n.burnin = nb, n.iter = ni)
 print(antlers.jags)
-write.csv(antlers.jags$summary, './/output/antlers.csv')
+write.csv(antlers.jags$summary, './/output/antlers.rain.site.csv')
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output,
 #then index in the order from output so above was bcs[j,i,k], can rename accordingly
 gather.bcs<- antlers.jags %>% gather_draws(bcs[by.rain,site])
@@ -347,5 +340,5 @@ plot1<- gather.bcs  %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('.//figures/antlers.jpg', plot1, width = 10, height = 8)
+ggsave('.//figures/antlers.rain.bs.intrx.jpg', plot1, width = 10, height = 8)
 
