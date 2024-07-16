@@ -26,7 +26,8 @@ bs  #dmp is 1, e yana 2, w yana 3
 class(data$year_cap)
 data$age <- data$year_cap - data$year_birth 
 ageclass <- data$age
-unique(ageclass)
+ageclass1 <- scale(ageclass)
+ageclass <- as.vector(ageclass1)
 
 #create a vector for capture year, to fit random effect later
 capyear <- data$year_cap-min(data$year_cap)+1
@@ -75,9 +76,11 @@ model{
 
 #priors
 
-for(u in 1:12){ #ageclass
-  age.beta[u] ~ dnorm(0,0.001)
-}
+age.beta ~ dunif( 0 , 10 )
+
+# for(u in 1:12){ #ageclass
+#   age.beta[u] ~ dnorm(0,0.001)
+# }
 
 for (u in 1:3){ #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
@@ -93,6 +96,10 @@ for (u in 1:494){ #random effect for animal-id
   eps.id[u] ~ dnorm(0, sigma)
 }
 
+# for (u in 1:3){ #rain birthsite interaction
+#   rain.bs.beta[u] ~ dnorm( 0 , 0.001 )
+# }
+
 #hyperparameters
 sigma ~ dunif(0,10)
 tau <- 1/(sigma*sigma)
@@ -100,31 +107,31 @@ tau <- 1/(sigma*sigma)
 # Likelihood
 for (i in 1:n){
  weight[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- age.beta[ageclass[i]] + bs.beta[bs[i]] 
+ mu[i] <- age.beta*ageclass[i] + bs.beta[bs[i]] 
                                 + rain.by.beta*annualby[i] 
                                 + eps.capyear[capyear[i]]
                                 + eps.id[animal_id[i]]
+                                #+ rain.bs.beta[bs[i]]*annualby[i]
  
  }                                   
 
 #derived parameter
   for (i in 1:3){ #birthsite
     for (j in 1:100){ #birth rain sim
-      bodymass[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j]
+      bodymass[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j] 
+                                    # + age.beta[k]
+                                    #+ rain.bs.beta[i]*annual.by.sim[j]
 
-  }
+      }
+    }
   
-  }
-    
-  for (i in 1:3){ #birthsite
-    site_diff[i] <- bs.beta[i] - bs.beta[1]
-  }
+  # 
+  #   
+  # for (i in 1:3){ #birthsite
+  #   site_diff[i] <- bs.beta[i] - bs.beta[1]
+  # }
   
-  for ( i in 1:3){
-    for (j in c(1,100)){
-    mass_diff[j,i] <- bodymass[j,1] - bodymass[j,i]
-  }
-  }
+
 }
 ',fill = TRUE)
 sink()
@@ -138,12 +145,12 @@ jags.data <- list(n=n, bs = bs, annualby = annualby, weight = weightlb,
                   )
 
 #inits function
-inits<- function(){list(bs.beta = rnorm(3, 0, 1), age.beta = rnorm(12,0,1), rain.by.beta = rnorm(1,0,1),
+inits<- function(){list(bs.beta = rnorm(3, 0, 1), age.beta = runif(1,0,10), rain.by.beta = rnorm(1,0,1),
                         sigma = rlnorm(1))}
 #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),age.beta = rbinom(2226,1,1
 
 #parameters to estimate
-parameters <- c('bs.beta', 'rain.by.beta', 'age.beta','site_diff', 'mass_diff', 'bodymass')#'age.beta', , 'bcs'
+parameters <- c('bs.beta', 'rain.by.beta', 'age.beta', 'bodymass')  #, 'rain.bs.beta'
 
 #MCMC settings
 ni <- 1000
@@ -154,15 +161,17 @@ nc <- 3
 weight.jags<- jagsUI(jags.data, inits, parameters, 'weight.jags', n.thin = nt, n.chains = nc,
                        n.burnin = nb, n.iter = ni)
 print(weight.jags)
-write.csv(weight.jags$summary, './output/weight.final.csv')
-#gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
-#then index in the order from output so above was bcs[j,i,k], can rename accordingly
-gather<- weight.jags %>% gather_draws(bodymass[by.rain,site]) 
+write.csv(weight.jags$summary, './output/weight.csv')
 
-#filter for min, max, and median birthyear rain values 
+#gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output,
+#then index in the order from output so above was bcs[j,i,k], can rename accordingly
+gather<- weight.jags %>% gather_draws(bodymass[by.rain,site])
+#
+#filter for min, max, and median birthyear rain values
 # gather<-gather %>% filter(by.rain %in% c(1,50,100))
 # gather$by.rain <- as.factor(gather$by.rain)
 gather$site <- as.factor(gather$site)
+# gather$age <- as.factor((gather$age))
 
 #find first row for 2nd rain value
 first_idx <- which(gather$by.rain == 2)[1] # 4500 values of rain 1
@@ -176,16 +185,16 @@ vector1 <- numeric(0)
 rain.sim3 <- for (i in annual.by.sim.1) {
   rep_i <- rep(i, times = 4500)
   vector1 <- c(vector1,rep_i)
-  
+
 }
 
 gather$annual.by.sim <- vector1
 
 
 
-plot<- gather  %>% 
+plot<- gather  %>%
   ggplot(aes(x=annual.by.sim, y=.value, color = site, fill = site)) +
-  #facet_wrap(vars(age), nrow = 1)+
+  # facet_wrap(vars(age), nrow = 1)+
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
   scale_fill_viridis_d(alpha = .2, labels = c('DMP', 'EY', 'WY')) + #this allowed me to opacify the ribbon but not the line
   scale_color_viridis_d(labels = c('DMP', 'EY', 'WY'))+ #color of line but no opacification
@@ -194,7 +203,7 @@ plot<- gather  %>%
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.border = element_blank(),
         axis.line = element_line(),
-        legend.position = c(0.15,0.9),
+        # legend.position = c(0.15,0.9),
         legend.title = element_blank(),
         legend.text = element_text(size = 28),
         plot.title = element_text(face = 'bold', size = 21, hjust = 0.5),
@@ -204,9 +213,9 @@ plot<- gather  %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/weight.rain.site1.jpg', plot, width = 10, height = 8)
-
-########################################################################################
+ggsave('.//figures/weight.jpg', plot, width = 10, height = 8)
+# # 
+# ########################################################################################
 #top performing model from survival data
 #antlers ~ int + age + site + by.rain + 1|capyear
 set.seed(100)
@@ -216,9 +225,8 @@ model{
 
 #priors
 
-for(u in 1:12){ #ageclass
-  age.beta[u] ~ dnorm(0,0.001)
-}
+age.beta ~ dunif( 0 , 10 )
+
 
 for (u in 1:3){ #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
@@ -241,40 +249,40 @@ tau <- 1/(sigma*sigma)
 # Likelihood
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- age.beta[ageclass[i]] + bs.beta[bs[i]] 
-                                + rain.by.beta*annualby[i] 
+ mu[i] <- age.beta*ageclass[i] + bs.beta[bs[i]]
+                                + rain.by.beta*annualby[i]
                                 + eps.capyear[capyear[i]]
                                 + eps.id[animal_id[i]]
- 
- }                                   
+
+ }
 
 #derived parameter
   for (i in 1:3){ #birthsite
     for (j in 1:100){ #birth rain sim
-      bcs[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j]
+      bcs[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j] 
+}
+  }
 
-  }
   
-  }
     for (i in 1:3){ #birthsite
     site_diff[i] <- bs.beta[i] - bs.beta[1]
     }
-  
-    
+
+
 }
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, bs = bs, annualby = annualby, antlers = antlerin, 
-                  ageclass = ageclass, 
+jags.data <- list(n=n, bs = bs, annualby = annualby, antlers = antlerin,
+                  ageclass = ageclass,
                   capyear=capyear,
                   animal_id = animal_id,
                   annual.by.sim = annual.by.sim
 )
 
 #inits function
-inits<- function(){list(bs.beta = rnorm(3, 0, 1), age.beta = rnorm(12,0,1), rain.by.beta = rnorm(1,0,1),
+inits<- function(){list(bs.beta = rnorm(3, 0, 1), rain.by.beta = rnorm(1,0,1),
                         sigma = rlnorm(1))}
 #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),age.beta = rbinom(2226,1,1
 
@@ -290,12 +298,12 @@ nc <- 3
 antlers.jags<- jagsUI(jags.data, inits, parameters, 'antlers.jags', n.thin = nt, n.chains = nc,
                      n.burnin = nb, n.iter = ni)
 print(antlers.jags)
-write.csv(antlers.jags$summary, './output/antlers.final.csv')
-#gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output, 
+write.csv(antlers.jags$summary, './/output/antlers.csv')
+#gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output,
 #then index in the order from output so above was bcs[j,i,k], can rename accordingly
-gather.bcs<- antlers.jags %>% gather_draws(bcs[by.rain,site]) 
+gather.bcs<- antlers.jags %>% gather_draws(bcs[by.rain,site])
 
-#filter for min, max, and median birthyear rain values 
+#filter for min, max, and median birthyear rain values
 # gather<-gather %>% filter(by.rain %in% c(1,50,100))
 # gather$by.rain <- as.factor(gather$by.rain)
 gather.bcs$site <- as.factor(gather.bcs$site)
@@ -310,18 +318,17 @@ annual.by.sim.1 <- (annual.by.sim * sd(data$annual.by)) + mean(data$annual.by)
 #create vector containing simulated rainfall data but in the format to sync up with gather
 vector1 <- numeric(0)
 rain.sim3 <- for (i in annual.by.sim.1) {
-  rep_i <- rep(i, times = 4500)
+  rep_i <- rep(i, times = 4500) #adjust based upon first_idx
   vector1 <- c(vector1,rep_i)
-  
+
 }
 
 gather.bcs$annual.by.sim <- vector1
 
 
 
-plot1<- gather.bcs  %>% 
+plot1<- gather.bcs  %>%
   ggplot(aes(x=annual.by.sim, y=.value, color = site, fill = site)) +
-  #facet_wrap(vars(age), nrow = 1)+
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
   scale_fill_viridis_d(alpha = .2, labels = c('DMP', 'EY', 'WY')) + #this allowed me to opacify the ribbon but not the line
   scale_color_viridis_d(labels = c('DMP', 'EY', 'WY'))+ #color of line but no opacification
@@ -340,5 +347,5 @@ plot1<- gather.bcs  %>%
         panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
-ggsave('./figures/antlers.rain.site1.jpg', plot1, width = 10, height = 8)
+ggsave('.//figures/antlers.jpg', plot1, width = 10, height = 8)
 

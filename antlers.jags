@@ -3,9 +3,8 @@ model{
 
 #priors
 
-for(u in 1:12){ #ageclass
-  age.beta[u] ~ dnorm(0,0.001)
-}
+age.beta ~ dunif( 0 , 10 )
+
 
 for (u in 1:3){ #birthsite
   bs.beta[u] ~ dnorm(0,0.001)
@@ -28,24 +27,25 @@ tau <- 1/(sigma*sigma)
 # Likelihood
 for (i in 1:n){
  antlers[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- age.beta[ageclass[i]] + bs.beta[bs[i]] 
-                                + rain.by.beta*annualby[i] 
+ mu[i] <- age.beta*ageclass[i] + bs.beta[bs[i]]
+                                + rain.by.beta*annualby[i]
                                 + eps.capyear[capyear[i]]
                                 + eps.id[animal_id[i]]
- 
- }                                   
+
+ }
 
 #derived parameter
   for (i in 1:3){ #birthsite
     for (j in 1:100){ #birth rain sim
-      bcs[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j]
+      bcs[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j] 
+}
+  }
 
-  }
   
-  }
     for (i in 1:3){ #birthsite
     site_diff[i] <- bs.beta[i] - bs.beta[1]
-  }
-    
+    }
+
+
 }
 
