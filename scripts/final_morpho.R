@@ -9,20 +9,25 @@ library(here)
 
 
 #Load dataset with no fawns, just animals with antlers
-# data <- read.csv('./raw/bucks_nofawns.csv', header=T)
 data<- read.csv('./clean/nofawns22rain.csv', header=T)
 head(data)
+
+data <- data %>% filter(year_birth >= '2011')
+
 
 #replace zeros with NA
 data[data==0] <- NA
 
 #create a vector with 1 for treatment, 2 for control, 3 for tgt
 bs<- as.numeric(factor(data$birthsite))
+bs
+count <- data %>% count(birthsite,age)
 
 #create vectors of things of interest
 data$age <- data$year_cap - data$year_birth 
 ageclass <- data$age
-ageclass <- as.vector(scale(ageclass)) #scale and center ageclass to treat as continuous cov.
+
+ageclass.sc <- as.vector(scale(ageclass)) #scale and center ageclass to treat as continuous cov.
 
 #create a vector for capture year, to fit random effect later
 capyear <- data$year_cap-min(data$year_cap)+1
@@ -69,25 +74,25 @@ model{
 
 #priors
 
-age.beta ~ dunif( 0 , 10 )
+beta1 ~ dunif( 0 , 10 ) #age
 
 for (u in 1:3){ #birthsite
-  bs.beta[u] ~ dnorm(0,0.001)
+  beta2[u] ~ dnorm(0,0.001)
 }
 
-rain.by.beta ~ dnorm(0, 0.001) #birth year rain, continuous
-
-for (u in 1:15){ #random effect for capture year
-  eps.capyear[u] ~ dnorm(0,sigma)
-}
-
-for (u in 1:494){ #random effect for animal-id
-  eps.id[u] ~ dnorm(0, sigma)
-}
-# 
-# for (u in 1:3){ #rain birthsite interaction
-#   rain.bs.beta[u] ~ dnorm( 0 , 0.001 )
+beta3 ~ dnorm(0, 0.001) #birth year rain, continuous
+#
+# for (u in 1:11){ #random effect for capture year
+#   eps1[u] ~ dnorm(0,sigma)
 # }
+#
+# for (u in 1:377){ #random effect for animal-id
+#   eps2[u] ~ dnorm(0, sigma)
+# }
+
+for (u in 1:3){ #rain birthsite interaction
+  beta4[u] ~ dnorm( 0 , 0.001 )
+}
 
 #hyperparameters
 sigma ~ dunif(0,10)
@@ -96,72 +101,69 @@ tau <- 1/(sigma*sigma)
 # Likelihood
 for (i in 1:n){
  weight[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
- mu[i] <- age.beta*ageclass[i] + bs.beta[bs[i]] 
-                                + rain.by.beta*annualby[i] 
-                                + eps.capyear[capyear[i]]
-                                + eps.id[animal_id[i]]
-                                # + rain.bs.beta[bs[i]]*annualby[i]
- 
- }                                   
+ mu[i] <- beta1*ageclass[i]   #ageclass categorical
+              + beta2[bs[i]]  #birthsite categorical 
+              + beta3*annualby[i] #continuous birth year rain
+              + beta4[bs[i]]*annualby[i]  #interaction betw by rain and site
+              # + eps.capyear[capyear[i]]
+              # + eps.id[animal_id[i]]
+ }
 
 #derived parameter
   for (i in 1:3){ #birthsite
     for (j in 1:100){ #birth rain sim
-      bodymass[j,i] <- bs.beta[i] + rain.by.beta*annual.by.sim[j] 
-                                    # + rain.bs.beta[i]*annual.by.sim[j]
+      bodymass[j,i] <- beta2[i] + beta3*annual.by.sim[j]
+                                    + beta4[i]*annual.by.sim[j]
 
       }
     }
-  
+
 
   for (i in 1:3){ #birthsite
-    site_diff[i] <- bs.beta[i] - bs.beta[1]
+    site_diff[i] <- beta2[i] - beta2[1]
   }
-  
+
 
 }
 ',fill = TRUE)
 sink()
 
 #bundle data
-jags.data <- list(n=n, bs = bs, annualby = annualby, weight = weightlb, 
-                                                      ageclass = ageclass, 
+jags.data <- list(n=n, bs = bs, annualby = annualby, weight = antlerin,
+                                                      ageclass = ageclass,
                                                       capyear=capyear,
                                                       animal_id = animal_id,
                                                       annual.by.sim = annual.by.sim
                   )
 
 #inits function
-inits<- function(){list(bs.beta = rnorm(3, 0, 1), age.beta = runif(1,0,10), rain.by.beta = rnorm(1,0,1),
-                        sigma = rlnorm(1))}
+inits<- function(){list(beta1 = runif(1,0,10), beta2 = rnorm(3, 0, 1), beta3 = rnorm(1,0,1),
+                        beta4 = rnorm(3,0,1), sigma = rlnorm(1))}
 #log normal pulls just positive values,interaction.beta = rnorm(9, 0, 1),age.beta = rbinom(2226,1,1
 
 #parameters to estimate
-parameters <- c('bs.beta', 'rain.by.beta', 'age.beta',  'bodymass')  #, 'rain.bs.beta'
+parameters <- c('beta1', 'beta2', 'beta3', 'beta4', 'bodymass')  #, 'rain.bs.beta'
 
 #MCMC settings
-ni <- 1000
-nb <- 500
+ni <- 5000
+nb <- 2000
 nt<- 1
 nc <- 3
 
 weight.jags<- jagsUI(jags.data, inits, parameters, 'weight.jags', n.thin = nt, n.chains = nc,
-                       n.burnin = nb, n.iter = ni)
+                       n.burnin = nb, n.iter = ni, parallel = T)
 print(weight.jags)
-write.csv(weight.jags$summary, './/output/weight.rain.site.csv')
+MCMCtrace(weight.jags)
+# write.csv(weight.jags$summary, './/output/weight.rain.site.csv')
 
 #gatherdraws creates a dataframe in long format, need to subset by the variable of interest in jags output,
 #then index in the order from output so above was bcs[j,i,k], can rename accordingly
 gather<- weight.jags %>% gather_draws(bodymass[by.rain,site])
-#
-#filter for min, max, and median birthyear rain values
-# gather<-gather %>% filter(by.rain %in% c(1,50,100))
-# gather$by.rain <- as.factor(gather$by.rain)
+
 gather$site <- as.factor(gather$site)
-# gather$age <- as.factor((gather$age))
 
 #find first row for 2nd rain value
-first_idx <- which(gather$by.rain == 2)[1] # 4500 values of rain 1
+first_idx <- which(gather$by.rain == 2)[1] # 27000 values of rain 1
 
 # unscale and uncenter rain.sim
 annual.by.sim.1 <- (annual.by.sim * sd(data$annual.by)) + mean(data$annual.by)
@@ -170,7 +172,7 @@ annual.by.sim.1 <- (annual.by.sim * sd(data$annual.by)) + mean(data$annual.by)
 #create vector containing simulated rainfall data but in the format to sync up with gather
 vector1 <- numeric(0)
 rain.sim3 <- for (i in annual.by.sim.1) {
-  rep_i <- rep(i, times = 4500)
+  rep_i <- rep(i, times = 27000)
   vector1 <- c(vector1,rep_i)
 
 }
@@ -181,7 +183,6 @@ gather$annual.by.sim <- vector1
 
 plot<- gather  %>%
   ggplot(aes(x=annual.by.sim, y=.value, color = site, fill = site)) +
-  # facet_wrap(vars(age), nrow = 1)+
   stat_lineribbon(.width = 0.95)+ #statline ribbon takes posterior estimates and calculates CRI
   scale_fill_viridis_d(alpha = .2, labels = c('DMP', 'EY', 'WY')) + #this allowed me to opacify the ribbon but not the line
   scale_color_viridis_d(labels = c('DMP', 'EY', 'WY'))+ #color of line but no opacification
@@ -201,6 +202,7 @@ plot<- gather  %>%
         plot.background = element_rect(fill='transparent', color=NA)) #transparent plot bg)
 
 ggsave('.//figures/weight.rain.site.intrx.jpg', plot, width = 10, height = 8)
+
 # # 
 # ########################################################################################
 #top performing model from survival data

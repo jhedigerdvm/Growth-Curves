@@ -2,8 +2,32 @@
 
 library(ggplot2)
 library(tidyverse)
+library(dplyr)
+
 library(here)
 
+
+data <- read.csv('./raw/master_data_2022.csv', header = T) #contains fawn data
+
+#create birthsite column with three groups
+
+data1 <- data %>%
+  mutate(
+    birthsite = case_when(
+      substr(Unique.Buck.Code.., 1, 2) == "90" ~ "ey",
+      substr(Unique.Buck.Code.., 1, 2) == "27" & substr(Unique.Buck.Code.., 10, 10) == "0" ~ "wy",
+      substr(Unique.Buck.Code.., 1, 2) == "27" & substr(Unique.Buck.Code.., 10, 10) == "1" ~ "dmp",
+      TRUE ~ NA_character_  # fallback for other cases
+    )
+  )
+
+data1 <- data1[,c(1,45, 2:44)] #reorder dataframe bring birthsite to column 2
+age_summary <- data1 %>%
+  group_by(Capture.Year, birthsite, Age) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  arrange(Capture.Year, birthsite, Age)
+
+write.csv(age_summary, './output/age_n_byyear.csv', row.names = F)
 
 #Load dataset with no fawns, just animals with antlers
 data <- read.csv('./raw/bucks_nofawns.csv', header=T)  #does not contain 2022 data
