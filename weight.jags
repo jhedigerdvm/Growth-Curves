@@ -9,17 +9,20 @@ for (u in 1:3){ #birthsite
   beta2[u] ~ dnorm(0,0.001)
 }
 
-beta3 ~ dnorm(0, 0.001) #birth year rain, continuous
-#
+for (u in 1:11){
+  beta3[u] ~ dnorm(0, 0.001) #cap year categorical
+}
+# 
 # for (u in 1:11){ #random effect for capture year
 #   eps1[u] ~ dnorm(0,sigma)
 # }
+
 #
 # for (u in 1:377){ #random effect for animal-id
 #   eps2[u] ~ dnorm(0, sigma)
 # }
 
-for (u in 1:3){ #rain birthsite interaction
+for (u in 1:3){ #year and birthsite interaction
   beta4[u] ~ dnorm( 0 , 0.001 )
 }
 
@@ -29,28 +32,28 @@ tau <- 1/(sigma*sigma)
 
 # Likelihood
 for (i in 1:n){
- weight[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
+ morpho[i] ~ dnorm(mu[i], tau) #each antler is a draw from this distribution
  mu[i] <- beta1*ageclass[i]   #ageclass categorical
               + beta2[bs[i]]  #birthsite categorical 
-              + beta3*annualby[i] #continuous birth year rain
-              + beta4[bs[i]]*annualby[i]  #interaction betw by rain and site
-              # + eps.capyear[capyear[i]]
+              + beta3[year[i]] #continuous birth year rain
+              + beta4[bs[i]]*year[i]  #interaction betw by year and site
+              #+ eps1[capyear[i]]
               # + eps.id[animal_id[i]]
  }
 
 #derived parameter
   for (i in 1:3){ #birthsite
-    for (j in 1:100){ #birth rain sim
-      bodymass[j,i] <- beta2[i] + beta3*annual.by.sim[j]
-                                    + beta4[i]*annual.by.sim[j]
+    for (j in 1:11){ #year
+      response[i,j] <- beta2[i] + beta3[j]
+                                    + beta4[i]*j
 
       }
     }
 
-
-  for (i in 1:3){ #birthsite
-    site_diff[i] <- beta2[i] - beta2[1]
-  }
+# 
+#   for (i in 1:3){ #birthsite
+#     site_diff[i] <- beta2[i] - beta2[1]
+#   }
 
 
 }
