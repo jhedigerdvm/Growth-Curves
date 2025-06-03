@@ -153,3 +153,42 @@ merge1$antler.cm <- round(merge1$antler.cm, digits = 2)
 
 #save updated file with 2007 to 2022 buck data and rainfall, no fawns
 write.csv(merge1, './clean/nofawns22rain.csv', row.names = F)
+
+#read in data if not already
+#going to create another column in nofawns22rain.csv to include environmental matching
+#this new column will be a 3 class categorical, byrain=cyrain, byrain>cyrain, byrain<cyrain
+#we will bin into dry, intermediate and wet
+#first lets find the upper and lower quantiles
+quantile(data$annual.by, probs = c(0.25, 0.75)) #lower 18.3, upper 31.8
+quantile(data$annual.cy, probs = c(0.25, 0.75)) #lower 19.5, upper 29.10
+
+#create new column for binned data with assigned values
+data1 <- data %>%
+  mutate(by.rain.bin = case_when(
+    annual.by <= 18.3 ~ "dry",
+    annual.by >= 31.8 ~ "wet",
+    TRUE ~ "intermediate"
+  ))
+data1 <- data1 %>%
+  mutate(cy.rain.bin = case_when(
+    annual.cy <= 19.5 ~ "dry",
+    annual.cy >= 29.10 ~ "wet",
+    TRUE ~ "intermediate"
+  ))
+data2 <- data1 %>%
+  mutate(match = case_when(
+    cy.rain.bin == by.rain.bin ~ 1,
+    by.rain.bin == "wet" & cy.rain.bin %in% c("dry", "intermediate") ~ 2,
+    by.rain.bin == "dry" & cy.rain.bin %in% c("intermediate", "wet") ~ 3,
+    by.rain.bin == "intermediate" & cy.rain.bin %in% c("dry") ~ 2,
+    by.rain.bin == "intermediate" & cy.rain.bin %in% c("wet") ~ 3,
+    TRUE ~ NA_real_  # For any unexpected combinations
+  ))
+
+data2 %>% count(birthsite,match)
+#1 = by and cy rain match, 2 = by rain > cy rain, 3 = by rain < cy rain
+data2$match <- as.factor(data2$match)
+str(data2)
+
+write.csv(data2, './clean/nofawns22rain.bin.csv', row.names = F)
+data<-read.csv('./clean/nofawns22rain.bin.csv', header = T)
