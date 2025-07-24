@@ -1,0 +1,32 @@
+
+model{
+
+#priors
+beta1 ~ dnorm(0, 0.001) #log weight as continuous
+beta4 ~ dnorm(0, 0.001)   # age continuous
+
+for (u in 1:3){
+  beta2[u] ~ dnorm(0, 0.001)  #site effect
+  beta3[u] ~ dnorm(0, 0.001)  #site and log weight interaction
+}
+
+#hyperparameters
+  sigma ~ dunif(0,10)
+  tau <- 1/(sigma*sigma)
+
+# Likelihood
+for (i in 1:n){
+ y[i] ~ dnorm(mu[i], tau) #each morpho is a draw from this distribution
+ mu[i] <-   beta1*morpho[i]   #log weight continuous
+              + beta2[bs[i]]  # site effect
+              + beta3[bs[i]]*morpho[i]
+              + beta4*age[i]
+          
+ }
+
+
+
+
+
+}
+
